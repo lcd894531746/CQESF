@@ -1,0 +1,8 @@
+@import "../ershou/index.wxss";
+
+.empty-tip {
+  text-align: center;
+  color: #9aa0ab;
+  font-size: 24rpx;
+  padding: 120rpx 0 30rpx;
+}

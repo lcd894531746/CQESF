@@ -1,0 +1,16 @@
+<view class="location-page">
+  <map
+    class="location-map"
+    longitude="{{longitude}}"
+    latitude="{{latitude}}"
+    scale="{{scale}}"
+    markers="{{markers}}"
+    show-location
+    enable-zoom
+    enable-scroll
+  />
+  <view class="location-card">
+    <view class="location-title">{{title}}</view>
+    <view class="location-address">{{address}}</view>
+  </view>
+</view>

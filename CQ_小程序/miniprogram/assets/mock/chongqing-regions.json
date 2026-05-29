@@ -1,0 +1,106 @@
+{
+  "code": 200,
+  "msg": "SUCCESS",
+  "data": [
+    {
+      "id": 0,
+      "parentId": null,
+      "level": null,
+      "name": "不限",
+      "wholeName": null,
+      "areaCode": null,
+      "sort": null,
+      "location": null
+    },
+    {
+      "id": 18051,
+      "parentId": 18038,
+      "level": 3,
+      "name": "渝中区",
+      "wholeName": "重庆市，重庆市区，渝中区",
+      "areaCode": "500103",
+      "sort": 10,
+      "location": "106.568914,29.552631"
+    },
+    {
+      "id": 18050,
+      "parentId": 18038,
+      "level": 3,
+      "name": "江北区",
+      "wholeName": "重庆市，重庆市区，江北区",
+      "areaCode": "500105",
+      "sort": 11,
+      "location": "106.574395,29.606224"
+    },
+    {
+      "id": 18055,
+      "parentId": 18038,
+      "level": 3,
+      "name": "渝北区",
+      "wholeName": "重庆市，重庆市区，渝北区",
+      "areaCode": "500112",
+      "sort": 12,
+      "location": "106.631124,29.71812"
+    },
+    {
+      "id": 18054,
+      "parentId": 18038,
+      "level": 3,
+      "name": "九龙坡区",
+      "wholeName": "重庆市，重庆市区，九龙坡区",
+      "areaCode": "500107",
+      "sort": 13,
+      "location": "106.510515,29.502325"
+    },
+    {
+      "id": 18064,
+      "parentId": 18038,
+      "level": 3,
+      "name": "沙坪坝区",
+      "wholeName": "重庆市，重庆市区，沙坪坝区",
+      "areaCode": "500106",
+      "sort": 14,
+      "location": "106.456939,29.541017"
+    },
+    {
+      "id": 18062,
+      "parentId": 18038,
+      "level": 3,
+      "name": "南岸区",
+      "wholeName": "重庆市，重庆市区，南岸区",
+      "areaCode": "500108",
+      "sort": 15,
+      "location": "106.644254,29.50109"
+    },
+    {
+      "id": 18063,
+      "parentId": 18038,
+      "level": 3,
+      "name": "巴南区",
+      "wholeName": "重庆市，重庆市区，巴南区",
+      "areaCode": "500113",
+      "sort": 16,
+      "location": "106.540517,29.402145"
+    },
+    {
+      "id": 18048,
+      "parentId": 18038,
+      "level": 3,
+      "name": "大渡口区",
+      "wholeName": "重庆市，重庆市区，大渡口区",
+      "areaCode": "500104",
+      "sort": 17,
+      "location": "106.482299,29.484464"
+    },
+    {
+      "id": 18065,
+      "parentId": 18038,
+      "level": 3,
+      "name": "北碚区",
+      "wholeName": "重庆市，重庆市区，北碚区",
+      "areaCode": "500109",
+      "sort": 18,
+      "location": "106.395593,29.805197"
+    }
+  ]
+}

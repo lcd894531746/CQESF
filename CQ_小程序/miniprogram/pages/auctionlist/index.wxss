@@ -1,0 +1,279 @@
+page {
+  height: 100%;
+  background: #f6f6f6;
+}
+
+.page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-lan {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1rpx solid #e3e3e3;
+  border-radius: 8rpx;
+  height: 73rpx;
+  margin: 14rpx 20rpx 0;
+  padding: 0 20rpx;
+}
+
+.search-icon {
+  width: 26rpx;
+  height: 26rpx;
+}
+
+.search-input {
+  flex: 1;
+  margin-left: 20rpx;
+  height: 73rpx;
+  line-height: 73rpx;
+  font-size: 26rpx;
+  color: #1f232d;
+}
+
+.house-source-area {
+  margin: 20rpx;
+  background: #fff;
+  border-radius: 10rpx;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.select-lan {
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1rpx solid #eceff3;
+}
+
+.select-lan picker {
+  width: 20%;
+}
+
+.select-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.select-txt {
+  color: #4473c5;
+  font-size: 26rpx;
+}
+
+.select-arrow {
+  margin-left: 7rpx;
+  color: #8b96a8;
+  font-size: 18rpx;
+}
+
+.list-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.list-wrap {
+  padding-bottom: 20rpx;
+}
+
+.house-row {
+  border-bottom: 1rpx solid #eceff3;
+  padding: 20rpx 17rpx 10rpx;
+  display: flex;
+}
+
+.img-box {
+  width: 246rpx;
+  height: 186rpx;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8rpx;
+}
+
+.house-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.img-box-s {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  background: rgba(112, 112, 112, 0.6);
+  color: #fff;
+  font-size: 24rpx;
+}
+
+.house-info {
+  margin-left: 20rpx;
+  width: calc(100% - 266rpx);
+  display: flex;
+  flex-direction: column;
+}
+
+.house-title {
+  display: flex;
+  align-items: flex-start;
+}
+
+.auction-badge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 58rpx;
+  height: 31rpx;
+  z-index: 2;
+}
+
+.title-text {
+  color: #222;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 38rpx;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-all;
+}
+
+.area-lan {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+  height: 38rpx;
+}
+
+.area-house-box {
+  color: #777;
+  font-size: 24rpx;
+  line-height: 38rpx;
+}
+
+.tag-box-list {
+  margin-left: 18rpx;
+  color: #666;
+  font-size: 22rpx;
+  position: relative;
+}
+
+.tag-box-list::before {
+  content: '';
+  position: absolute;
+  left: -10rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rpx;
+  height: 16rpx;
+  background: #d8d8d8;
+}
+
+.price-lan {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+}
+
+.price-txt {
+  color: #666;
+  font-size: 22rpx;
+}
+
+.price-gap {
+  margin-left: 17rpx;
+}
+
+.start-price {
+  margin-left: 6rpx;
+  color: #ff1a34;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.end-price {
+  margin-left: 6rpx;
+  color: #222;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.desc-t4 {
+  margin-top: 10rpx;
+  padding: 8rpx 0 8rpx 8rpx;
+  border-radius: 4rpx;
+  display: flex;
+  align-items: center;
+}
+
+.desc-t4 .t2 {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.desc-t4 .t1 {
+  margin-left: 18rpx;
+  color: #777;
+  font-size: 24rpx;
+  position: relative;
+}
+
+.desc-t4 .t1::before {
+  content: '';
+  position: absolute;
+  left: -10rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rpx;
+  height: 16rpx;
+  background: #d8d8d8;
+}
+
+.status-upcoming {
+  background: linear-gradient(90deg, #e8f3ff, rgba(232, 246, 255, 0));
+}
+
+.status-upcoming .t2 {
+  color: #409eff;
+}
+
+.status-running {
+  background: linear-gradient(90deg, #ffece8, #fff);
+}
+
+.status-running .t2 {
+  color: #f53f3f;
+}
+
+.status-finished {
+  background: linear-gradient(90deg, #e4e4e4, rgba(223, 223, 223, 0));
+}
+
+.status-finished .t2 {
+  color: #333;
+}
+
+.status-unknown {
+  background: linear-gradient(90deg, #e8ffea, rgba(232, 255, 234, 0));
+}
+
+.status-unknown .t2 {
+  color: #00b42a;
+}
+
+.load-more-tip {
+  text-align: center;
+  color: #9aa0ab;
+  font-size: 24rpx;
+  padding: 16rpx 0;
+}

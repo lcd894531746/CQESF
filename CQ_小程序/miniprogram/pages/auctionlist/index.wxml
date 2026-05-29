@@ -1,0 +1,67 @@
+<view class="page">
+  <view class="search-lan">
+    <image class="search-icon" src="/assets/icons/city-icon.png" mode="aspectFit"></image>
+    <input
+      class="search-input"
+      placeholder="按楼盘名/关键字搜索"
+      value="{{keyword}}"
+      confirm-type="search"
+      bindinput="onKeywordInput"
+      bindconfirm="onSearchConfirm"
+    />
+  </view>
+
+  <view class="house-source-area">
+    <view class="select-lan">
+      <picker mode="selector" range="{{filterOptions.area}}" value="{{filterIndex.area}}" bindchange="onFilterAreaChange">
+        <view class="select-box"><text class="select-txt">{{filterOptions.area[filterIndex.area]}}</text><text class="select-arrow">▾</text></view>
+      </picker>
+      <picker mode="selector" range="{{filterOptions.layout}}" value="{{filterIndex.layout}}" bindchange="onFilterLayoutChange">
+        <view class="select-box"><text class="select-txt">{{filterOptions.layout[filterIndex.layout]}}</text><text class="select-arrow">▾</text></view>
+      </picker>
+      <picker mode="selector" range="{{filterOptions.price}}" value="{{filterIndex.price}}" bindchange="onFilterPriceChange">
+        <view class="select-box"><text class="select-txt">{{filterOptions.price[filterIndex.price]}}</text><text class="select-arrow">▾</text></view>
+      </picker>
+      <picker mode="selector" range="{{filterOptions.more}}" value="{{filterIndex.more}}" bindchange="onFilterMoreChange">
+        <view class="select-box"><text class="select-txt">{{filterOptions.more[filterIndex.more]}}</text><text class="select-arrow">▾</text></view>
+      </picker>
+      <picker mode="selector" range="{{filterOptions.sort}}" value="{{filterIndex.sort}}" bindchange="onFilterSortChange">
+        <view class="select-box"><text class="select-txt">{{filterOptions.sort[filterIndex.sort]}}</text><text class="select-arrow">▾</text></view>
+      </picker>
+    </view>
+
+    <scroll-view class="list-scroll" scroll-y lower-threshold="120" bindscrolltolower="onLoadMore">
+      <view class="list-wrap">
+        <block wx:for="{{list}}" wx:key="id">
+          <view class="house-row" data-id="{{item.id}}" bindtap="onHouseTap">
+            <view class="img-box">
+              <image class="house-img" src="{{item.image}}" mode="aspectFill"></image>
+              <image class="auction-badge" wx:if="{{item.auctionModeBadge}}" src="{{item.auctionModeBadge}}" mode="aspectFit"></image>
+              <view class="img-box-s">{{item.communityNameText}}</view>
+            </view>
+            <view class="house-info">
+              <view class="house-title">
+                <text class="title-text">{{item.title}}</text>
+              </view>
+              <view class="area-lan">
+                <view class="area-house-box">{{item.areaText}}</view>
+                <view class="tag-box-list" wx:if="{{item.layoutText}}">{{item.layoutText}}</view>
+              </view>
+              <view class="price-lan">
+                <view class="price-txt">起拍价</view>
+                <view class="start-price">{{item.startingPriceText}}</view>
+                <view class="price-txt price-gap">市场价</view>
+                <view class="end-price">{{item.marketPriceText}}</view>
+              </view>
+              <view class="desc-t4 status-{{item.auctionStatusType}}">
+                <view class="t2">{{item.auctionStatusText}}</view>
+                <view class="t1">{{item.auctionTimeText}}</view>
+              </view>
+            </view>
+          </view>
+        </block>
+        <view class="load-more-tip" wx:if="{{!hasMore}}">没有更多了</view>
+      </view>
+    </scroll-view>
+  </view>
+</view>

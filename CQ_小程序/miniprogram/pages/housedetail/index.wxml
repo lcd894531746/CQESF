@@ -1,0 +1,78 @@
+<view class="detail-page">
+  <view class="detail-body">
+    <view class="banner-wrap">
+      <swiper
+        class="banner"
+        indicator-dots
+        duration="300"
+        touchable
+        current="{{currentImageIndex}}"
+        bindchange="onSwiperChange"
+      >
+      <swiper-item wx:for="{{house.images}}" wx:key="*this">
+        <image
+          class="banner-image"
+          src="{{item}}"
+          mode="aspectFill"
+          data-index="{{index}}"
+          bindtap="onPreviewImageTap"
+        />
+      </swiper-item>
+    </swiper>
+      <view class="banner-nav prev" wx:if="{{house.images.length > 1}}" bindtap="onPrevImage">‹</view>
+      <view class="banner-nav next" wx:if="{{house.images.length > 1}}" bindtap="onNextImage">›</view>
+      <view class="banner-index">{{currentImageIndex + 1}} / {{house.images.length || 1}}</view>
+      <view class="preview-btn" bindtap="onPreviewCurrentImage">预览大图</view>
+    </view>
+
+    <view class="detail-content">
+      <view class="title-row">{{house.title}}</view>
+      <view class="position-line">
+        <view class="position-row">{{house.position}}</view>
+        <view class="location-btn" bindtap="onGoLocationTap">
+          <image class="location-btn-icon" src="/assets/icons/icon_ditu.png" mode="aspectFit" />
+          <text>查看定位</text>
+        </view>
+      </view>
+      <view class="price-card">
+        <view class="price-row">
+          <text class="price-label">起拍价</text>
+          <text class="price-start">{{house.startingPriceText}}</text>
+          <text class="price-gap">市场价</text>
+          <text class="price-market">{{house.marketPriceText}}</text>
+        </view>
+      </view>
+      <view class="meta-row">
+        <text class="meta-chip">{{house.layoutText || '户型暂无'}}</text>
+        <text class="meta-chip">{{house.areaText}}</text>
+        <text class="meta-chip" wx:if="{{house.orientationText}}">{{house.orientationText}}</text>
+      </view>
+      <view class="auction-tip">{{house.auctionHint}}</view>
+      <view class="info-card">
+        <view class="card-title">房源信息</view>
+        <view class="info-grid">
+          <view class="info-item" wx:for="{{house.infoList}}" wx:key="label">
+            <text class="info-label">{{item.label}}</text>
+            <text class="info-value">{{item.value}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="content-bottom-space"></view>
+  </view>
+
+  <view class="fixed-contact-bar">
+    <view class="contact-left">
+      <image wx:if="{{house.hasContactAvatar}}" class="contact-avatar" src="{{house.contactAvatar}}" mode="aspectFill" />
+      <view wx:else class="contact-avatar default-avatar">
+        <view class="avatar-head"></view>
+        <view class="avatar-body"></view>
+      </view>
+      <view class="contact-info">
+        <text class="contact-name">{{house.contactName}}</text>
+        <text class="contact-phone">{{house.contactPhone}}</text>
+      </view>
+    </view>
+    <button class="call-btn" hover-class="none" bindtap="onCallTap">打电话</button>
+  </view>
+</view>

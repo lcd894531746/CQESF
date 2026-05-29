@@ -1,0 +1,1119 @@
+{
+  "errno": 0,
+  "error": "",
+  "trace_id": "ershou-c-app-api-10.22.34.122-0-1777432761026-0009397434",
+  "data": {
+    "config": {
+      "abTestValueFor0512": "",
+      "anchorStyle": 1,
+      "basicInfo": {
+        "area": 62.06,
+        "bedRoomNum": 1,
+        "cityId": "500000",
+        "communityId": "3611060282753",
+        "communityName": "双子星座",
+        "floorState": "高楼层/41层",
+        "hallNum": 1,
+        "hasFramePoints": 0,
+        "houseCode": "106125113135",
+        "houseStatus": 1,
+        "isFocus": false,
+        "isOffSale": false,
+        "mUrl": "https://m.ke.com/cq/ershoufang/106125113135.html?shareSource=beike_app",
+        "orientation": "西南",
+        "price": "55万",
+        "priceStr": "550000",
+        "title": "南坪 看江精装一房 视野开阔 采光充足",
+        "unitPrice": "8,863元/平",
+        "unitPriceStr": "8,863"
+      },
+      "bookingInfo": "",
+      "bottomConsultConf": {
+        "abTestFlag": "",
+        "contentType": "咨询"
+      },
+      "bottomConsultText": "近期有人咨询过",
+      "consultTextType": "0",
+      "hasLiveCard": false,
+      "headBrand": {
+        "bgPicture": "https://img.ljcdn.com/beike/lmz/1638179375554.png",
+        "houseType": "3",
+        "list": [
+          {
+            "tag": "店长推荐",
+            "textColor": "FFFFFF"
+          },
+          {
+            "icon": "https://img.ljcdn.com/beike/appapi/1660890837302.png",
+            "tag": "三层严选",
+            "textColor": "FFFFFF"
+          }
+        ],
+        "logo": "https://file.ljcdn.com/nebula/12331223213x_1729680896451.png",
+        "more": {
+          "actionUrl": "https://house.ke.com/ershou/haofang/index?cityId=500000&condition=d23008772b1100000677",
+          "icon": "https://img.ljcdn.com/beike/appapi/1660557933125.png"
+        }
+      },
+      "headPictures": [
+        {
+          "bgColor": "000000",
+          "groupId": 10,
+          "groupName": "VR",
+          "imgObjectList": [
+            {
+              "groupId": 10,
+              "groupName": "VR",
+              "imgUrl": "https://vrlab-image4.ljcdn.com/release/screenshot/auto3d-light-4Lyq2wP9GQDMNxkY/57775625b366cba77ee7977b3ae5be0d/1761455089_0/pc0_lwYe9DGXV.jpg?imageMogr2/quality/70/thumbnail/1024x",
+              "positionId": "g10n0",
+              "vrInfo": {
+                "agentAvatar": "",
+                "coverUrl": "https://vrlab-image4.ljcdn.com/release/screenshot/auto3d-light-4Lyq2wP9GQDMNxkY/57775625b366cba77ee7977b3ae5be0d/1761455089_0/pc0_lwYe9DGXV.jpg?imageMogr2/quality/70/thumbnail/1024x",
+                "docentUrl": "",
+                "isShowGuideTips": false,
+                "isSupportPull": false,
+                "loadingLogoUrl": "https://vrlab-public.ljcdn.com/release/web/loading/beike.0c74b987.png",
+                "preloadingContent": "{\"config\":{\"ios_cache_enable\":true,\"android_cache_enable\":true,\"max_size\":100,\"max_time\":604800,\"ios_cache_delay_loading_time_ms\":100,\"android_cache_delay_loading_time_ms\":100,\"ios_cache_tag\":\"realseeproxycache\",\"android_cache_tag\":\"realseeproxycache\",\"cache_tag\":{\"ios\":\"realseeproxycache\",\"android\":\"realseeproxycache\"},\"navive_render_enable\":true,\"navive_render_title_enable\":false,\"navive_render_fade_out_time\":1,\"navive_render_fade_out_time_ms\":100,\"navive_render_title_enable3\":true},\"data\":{\"work_code\":\"54djM07r2qG3Ey8e\",\"initial\":{\"pano_index\":0,\"heading\":0,\"latitude\":0,\"longitude\":0.002595628240523377,\"fov\":90,\"position\":[-0.0083864488,-0.006177726,0.0188969765],\"quaternion\":{\"w\":0.01585001060868646,\"x\":-0.011959509766041597,\"y\":-0.9997385895322837,\"z\":0.011335779616451588}},\"cache\":{\"extension\":[],\"model\":{},\"panorama\":{\"count\":13,\"type\":0,\"list\":[{\"index\":0,\"up\":\"https://vrlab-image1.ljcdn.com/release/auto3dhd/57775625b366cba77ee7977b3ae5be0d/images/cube_2048/0/23c248b179676c6efd9b639987267e4b/0_u.avif?imageMogr2/quality/70/thumbnail/1024x/format/jpg\",\"down\":\"https://vrlab-image2.ljcdn.com/release/auto3dhd/57775625b366cba77ee7977b3ae5be0d/images/cube_2048/0/23c248b179676c6efd9b639987267e4b/0_d.avif?imageMogr2/quality/70/thumbnail/1024x/format/jpg\",\"left\":\"https://vrlab-image1.ljcdn.com/release/auto3dhd/57775625b366cba77ee7977b3ae5be0d/images/cube_2048/0/23c248b179676c6efd9b639987267e4b/0_l.avif?imageMogr2/quality/70/thumbnail/1024x/format/jpg\",\"right\":\"https://vrlab-image2.ljcdn.com/release/auto3dhd/57775625b366cba77ee7977b3ae5be0d/images/cube_2048/0/23c248b179676c6efd9b639987267e4b/0_r.avif?imageMogr2/quality/70/thumbnail/1024x/format/jpg\",\"front\":\"https://vrlab-image1.ljcdn.com/release/auto3dhd/57775625b366cba77ee7977b3ae5be0d/images/cube_2048/0/23c248b179676c6efd9b639987267e4b/0_f.avif?imageMogr2/quality/70/thumbnail/1024x/format/jpg\",\"back\":\"https://vrlab-image2.ljcdn.com/release/auto3dhd/57775625b366cba77ee7977b3ae5be0d/images/cube_2048/0/23c248b179676c6efd9b639987267e4b/0_b.avif?imageMogr2/quality/70/thumbnail/1024x/format/jpg\"}]},\"animation_file_url\":\"https://vrlab-public.ljcdn.com/release/render_products/11425def2ce7209756ee0e91c1fb70ac/animation/14a28f12243cf2c1b39fa3543ee0b09d/animation.mp4\",\"animation_picture_url\":\"https://vrlab-public.ljcdn.com/release/render_products/11425def2ce7209756ee0e91c1fb70ac/animation/14a28f12243cf2c1b39fa3543ee0b09d/animation.jpg\"},\"house_title\":\"\",\"union_work_code\":\"xNX0DyK7cjGd0WNg\",\"union_plan_code\":\"0897KgA5HvXnr4QM\"},\"request_parameter\":{\"work_code\":\"54djM07r2qG3Ey8e\",\"house_code\":\"106125113135\",\"initial_pano_index\":0,\"city_id\":500000,\"user_id\":\"\",\"source\":\"ALLIANCE\",\"relation_id\":86007983,\"platform\":\"shell\"}}",
+                "pullTipsH1": "",
+                "pullTipsH2": "",
+                "source": 0,
+                "text": "经纪人讲房",
+                "url": "lianjiabeike://common/startVrWebview?animationType=0&htmlurlstring=https%3A%2F%2Fopen.realsee.com%2Fke%2F54djM07r2qG3Ey8e%2F1l5Rp6JBo2XIvTbhMTgAo3DHjWDebOw4%2F%23lianjia",
+                "urlXcx": "https://open.realsee.com/ke/54djM07r2qG3Ey8e/1l5Rp6JBo2XIvTbhMTgAo3DHjWDebOw4/#lianjia",
+                "vrLiveCard": {
+                  "title": "VR语音带看",
+                  "tipTitle": "试试VR语音带看",
+                  "tipSummary": "您足不出户，就能线上看实况、享受专人答疑",
+                  "actionUrl": "lianjiabeike://common/startVrWebview?animationType=0&htmlurlstring=https%3A%2F%2Fopen.realsee.com%2Fke%2F54djM07r2qG3Ey8e%2F1l5Rp6JBo2XIvTbhMTgAo3DHjWDebOw4%2F%3Flive%3D1%26from%3Dalliance_mini_program_default%26user_id%3D0%23lianjia",
+                  "actionXcxUrl": "https://open.realsee.com/ke/54djM07r2qG3Ey8e/1l5Rp6JBo2XIvTbhMTgAo3DHjWDebOw4/?live=1&from=alliance_mini_program_default&user_id=0#lianjia",
+                  "daikanType": "vr"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "bgColor": "000000",
+          "groupId": 2,
+          "groupName": "户型",
+          "imgObjectList": [
+            {
+              "groupId": 2,
+              "groupName": "户型",
+              "imgUrl": "https://ke-image.ljcdn.com/hdic-frame/standard_1761516331028.jpeg.1440x1080.jpg?from=ke.com",
+              "labelInfo": null,
+              "positionId": "g11n8"
+            }
+          ]
+        },
+        {
+          "bgColor": "000000",
+          "groupId": 16,
+          "groupName": "探房",
+          "imgObjectList": [
+            {
+              "groupId": 16,
+              "groupName": "探房",
+              "imgUrl": "https://img.ljcdn.com/flexible-mirror-bucket/b9d473c8-e12c-4bc2-b3d7-c7a137470f6a.jpeg?ak=21D37F84SWIUIZSO9SCJ&exp=315360000&ts=1763874762&sign=a3fc6e5a4c7d661bc651edd45be5f85b",
+              "caseId": "1763694712700118",
+              "schema": "lianjiabeike://universal/video/player?contentIds=1763694712700118&contentList=1763694712700118&filter=%7B%22projectName%22%3A%22%22%2C%22houseCode%22%3A%22106125113135%22%2C%22resblockId%22%3A%22%22%2C%22bizcircleId%22%3A%221100000677%22%7D&parentSceneId=686923721598945537&scene=ershou_house_head&source=ershoudetail&stat_id=d7onheevd562m2alnj9g",
+              "xcxUrl": "/subpackages/mercy/pages/videoLanding/index?contentIds=1763694712700118&contentList=1763694712700118&filter=%7B%22projectName%22%3A%22%22%2C%22houseCode%22%3A%22106125113135%22%2C%22resblockId%22%3A%22%22%2C%22bizcircleId%22%3A%221100000677%22%7D&parentSceneId=686923721598945537&scene=ershou_house_head&source=ershoudetail&stat_id=d7onheevd562m2alnj9g",
+              "actionUrl": "https://m.ke.com/mercy/video/land?contentIds=1763694712700118&contentList=1763694712700118&filter=%7B%22projectName%22%3A%22%22%2C%22houseCode%22%3A%22106125113135%22%2C%22resblockId%22%3A%22%22%2C%22bizcircleId%22%3A%221100000677%22%7D&parentSceneId=686923721598945537&scene=ershou_house_head&source=ershoudetail&stat_id=d7onheevd562m2alnj9g",
+              "isSameFrame": false,
+              "vrInfo": {},
+              "cardModel": {
+                "headPicture": "",
+                "coverVideo": "https://kelive21-vod.ke.com/6cbf925evodcq1500027634/5b8709175145403706371080471/playlist.f9.mp4",
+                "headTemplate": "default",
+                "duration": "78",
+                "height": 0,
+                "width": 0,
+                "video": "https://kelive21-vod.ke.com/6cbf925evodcq1500027634/702dad845145403706371935187/playlist.f9.mp4",
+                "hd265Url": "https://kelive21-vod.ke.com/6cbf925evodcq1500027634/702dad845145403706371935187/playlist.f9.mp4",
+                "use_new_head": false,
+                "ab_key": "",
+                "new_head_picture": {
+                  "head_picture": "https://img.ljcdn.com/article/head_pic/image_8160315309539232956.png",
+                  "background": "https://image1.ljcdn.com/beikehao/b393053ab2b44214fe71e34db3a9dabb.jpeg!m_fill,h_1125,w_1125,g_center"
+                }
+              },
+              "video": "https://kelive21-vod.ke.com/6cbf925evodcq1500027634/702dad845145403706371935187/playlist.f9.mp4",
+              "contentDigInfo": "{\"stat_id\":\"d7onheevd562m2alnj9g\"}",
+              "contentType": "",
+              "contentId": "",
+              "entityType": "",
+              "entityTypeText": "",
+              "entityId": "",
+              "videoIcon": "",
+              "videoDuration": 0,
+              "desc": "",
+              "brandDesc": "",
+              "resblockId": "",
+              "videoUrl": "",
+              "guideIconInfo": null,
+              "designLight": null,
+              "label": "",
+              "positionId": "g16n0",
+              "statisticsInfo": null,
+              "decorInfo": null,
+              "decorCardUiInfo": null,
+              "use_new_head": false,
+              "ab_key": "",
+              "new_head_picture": {
+                "head_picture": "https://img.ljcdn.com/article/head_pic/image_8160315309539232956.png",
+                "background": "https://image1.ljcdn.com/beikehao/b393053ab2b44214fe71e34db3a9dabb.jpeg!m_fill,h_1125,w_1125,g_center"
+              },
+              "reform3dEffectData": null
+            }
+          ]
+        },
+        {
+          "bgColor": "000000",
+          "groupId": 11,
+          "groupName": "图片",
+          "imgObjectList": [
+            {
+              "groupId": 11,
+              "groupName": "图片",
+              "imgUrl": "https://ke-image.ljcdn.com/110000-inspection/17615163880_kTyLB0FaC.jpg!m_fill,w_1000,h_750,lg_north_west,lx_0,ly_0,l_fbk,f_jpg,ls_50?from=ke.com",
+              "positionId": "g11n2",
+              "roomName": "客厅"
+            },
+            {
+              "groupId": 11,
+              "groupName": "图片",
+              "imgUrl": "https://ke-image.ljcdn.com/110000-inspection/17615163950_RlXQTtw1W.jpg!m_fill,w_1000,h_750,lg_north_west,lx_0,ly_0,l_fbk,f_jpg,ls_50?from=ke.com",
+              "positionId": "g11n3",
+              "roomName": "客厅"
+            },
+            {
+              "groupId": 11,
+              "groupName": "图片",
+              "imgUrl": "https://ke-image.ljcdn.com/110000-inspection/17615164060_PvRFn5n8O.jpg!m_fill,w_1000,h_750,lg_north_west,lx_0,ly_0,l_fbk,f_jpg,ls_50?from=ke.com",
+              "positionId": "g11n4",
+              "roomName": "卧室"
+            },
+            {
+              "groupId": 11,
+              "groupName": "图片",
+              "imgUrl": "https://ke-image.ljcdn.com/110000-inspection/17615164180_3j519LVSk.jpg!m_fill,w_1000,h_750,lg_north_west,lx_0,ly_0,l_fbk,f_jpg,ls_50?from=ke.com",
+              "positionId": "g11n5",
+              "roomName": "卧室"
+            },
+            {
+              "groupId": 11,
+              "groupName": "图片",
+              "imgUrl": "https://ke-image.ljcdn.com/110000-inspection/17615164330_DPBdjuUEz.jpg!m_fill,w_1000,h_750,lg_north_west,lx_0,ly_0,l_fbk,f_jpg,ls_50?from=ke.com",
+              "positionId": "g11n6",
+              "roomName": "厨房"
+            },
+            {
+              "groupId": 11,
+              "groupName": "图片",
+              "imgUrl": "https://ke-image.ljcdn.com/110000-inspection/17615164550_qPra0ScZt.jpg!m_fill,w_1000,h_750,lg_north_west,lx_0,ly_0,l_fbk,f_jpg,ls_50?from=ke.com",
+              "positionId": "g11n7",
+              "roomName": "卫生间"
+            }
+          ]
+        },
+        {
+          "abGroupType": "",
+          "bgColor": "000000",
+          "digKey": "jiazhuang",
+          "groupId": 15,
+          "groupName": "装修灵感",
+          "imgObjectList": [
+            {
+              "groupId": 15,
+              "groupName": "VR",
+              "imgUrl": "https://image2.ljcdn.com/utopia-file/p1/02bbc449196f526f65195fd62ffb114466f56dde-1193-896.png",
+              "caseId": "1701398173527196",
+              "schema": "https://m.home.ke.com/jinggong/bj/vrcompare?allIds=1701398173527196&cityId=500000&contentId=1701398173527196&fbExpoId=r177743276116721326610558809890&frameId=36000059769779&fromForDig=ershoufang_head_picture&houseId=106125113135&immersive=true&parentEntityId=106125113135&parentModuleType=houseDetailHeadPicture&abTestGroup=C&parentSceneId=686923728058690305",
+              "xcxUrl": "https://m.home.ke.com/jinggong/bj/vrcompare?allIds=1701398173527196&cityId=500000&contentId=1701398173527196&fbExpoId=r177743276116721326610558809890&frameId=36000059769779&fromForDig=ershoufang_head_picture&houseId=106125113135&immersive=true&parentEntityId=106125113135&parentModuleType=houseDetailHeadPicture&abTestGroup=C&parentSceneId=686923728058690305",
+              "caseStyle": "现代简约",
+              "caseDesc": "现代简约·87㎡·1室1厅",
+              "title": "打造U型厨房，甜蜜夫妻的完美催化剂",
+              "isSameFrame": false,
+              "vrInfo": {
+                "futureHomeActionUrl": "https://m.home.ke.com/jinggong/bj/vrcompare?allIds=1701398173527196&cityId=500000&contentId=1701398173527196&fbExpoId=r177743276116721326610558809890&frameId=36000059769779&fromForDig=ershoufang_head_picture&houseId=106125113135&immersive=true&parentEntityId=106125113135&parentModuleType=houseDetailHeadPicture&abTestGroup=C&parentSceneId=686923728058690305",
+                "futureHomePictureUrl": "https://image2.ljcdn.com/utopia-file/p1/02bbc449196f526f65195fd62ffb114466f56dde-1193-896.png"
+              },
+              "caseTags": [
+                "打造U型厨房",
+                "卫生间干湿分离",
+                "打造收纳玄关柜"
+              ],
+              "brandInfo": null,
+              "strategyInfo": {
+                "fbContentId": "1701398173527196",
+                "fbAbTestFlag": "reco_rule-700056-default-default",
+                "fbExpoId": "r177743276116721326610558809890",
+                "fbQueryId": "e927600fb62e2b2c8edafd5255d7a51d_MBR_e9fcbbc7665d4ee8bf21aa1bfc781c24",
+                "fbServiceId": "700056",
+                "fbItemLocation": "0",
+                "fbItemDetail": "1701398173527196",
+                "fbItemType": "zhuangxiu_deco-vr",
+                "fbItemId": ""
+              },
+              "cardModel": null,
+              "contentDigInfo": "",
+              "contentType": "VR",
+              "contentId": "1701398173527196",
+              "entityType": "deco-vr",
+              "entityTypeText": "",
+              "entityId": "1701398173527196",
+              "videoIcon": "",
+              "videoDuration": 0,
+              "desc": "",
+              "brandDesc": "",
+              "resblockId": "3611060282753",
+              "videoUrl": "",
+              "guideIconInfo": null,
+              "designLight": null,
+              "label": "",
+              "positionId": "g15n1",
+              "statisticsInfo": {
+                "case_id": 1701398173527196,
+                "content_type": "VR",
+                "fb_expo_id": "r177743276116721326610558809890",
+                "name": "现代简约",
+                "whether_succeed": "否"
+              },
+              "decorInfo": {
+                "colourfulTags": {
+                  "icon": "https://image2.ljcdn.com/nebula/decoration-c/IconStarsShengdu_1730367755338.png",
+                  "list": [
+                    "打造U型厨房",
+                    "卫生间干湿分离",
+                    "打造收纳玄关柜"
+                  ],
+                  "tagBgImageUrl": "https://image2.ljcdn.com/nebula/decoration-c/shengduTagBgImage_1730787309925.png",
+                  "textColor": "#FFFFFF"
+                }
+              },
+              "decorCardUiInfo": null,
+              "use_new_head": false,
+              "ab_key": "",
+              "new_head_picture": {
+                "head_picture": "",
+                "background": ""
+              },
+              "reform3dEffectData": null
+            }
+          ],
+          "title": "买完房可以这样处理"
+        }
+      ],
+      "isDefault": false,
+      "isOpenMyhome": true,
+      "isVr": true,
+      "miniProgram": {
+        "accessKey": "gh_2dbd87cb164c",
+        "path": "/subpackages/ershoufang/pages/esfDetail/esfDetail?cityId=500000&houseCode=106125113135&cardType=&from=shell&share=true&share_device_union_id=&share_entity_union_id=ddd90b7761c6f286b078c0645e668dde&share_id=9a16a86f715d4f3059da32c8df430c80&share_time=1777432761000&share_user_id=2000000074494200&share_user_type=2&source=share_beikexcx"
+      },
+      "navBar": {
+        "bgPicture": "https://img.ljcdn.com/beike/haofanglogo/1571888251140.png",
+        "logoPicture": "https://img.ljcdn.com/beike/haofanglogo/1572581326254.png",
+        "normalStyle": {
+          "iconColor": "FFFFFF",
+          "iconSelectedColor": "FA5741",
+          "iconTipsBgColor": "FA5741",
+          "iconTipsTextColor": "FFFFFF",
+          "statusBarStyle": "1"
+        },
+        "scrolledStyle": {
+          "iconColor": "FFFFFF",
+          "iconSelectedColor": "FFFFFF",
+          "iconTipsBgColor": "FFFFFF",
+          "iconTipsTextColor": "D53C3C",
+          "statusBarStyle": "1"
+        }
+      },
+      "share": {
+        "showAgent": true,
+        "showCircle": true,
+        "showMsg": true,
+        "showOsa": false,
+        "showWeixin": true
+      },
+      "tailAgent": null,
+      "textFormatDownPrice": {
+        "color": "3072F6",
+        "itemKey": "textFormatDownPrice",
+        "textEnd": "电话讲解",
+        "textHead": "专属经纪人"
+      },
+      "topBar": {
+        "houseCompareUrl": "https://house.ke.com/compare/house/detail?hidenav=2&codes=106125113135&cityId=500000&id=106125113135&must_login=1&need_login=1&showShare=1&isRecommend=1",
+        "isFollowed": 0,
+        "moreInfo": {
+          "correctionUrl": "https://m.ke.com/liverpool/ershoufangCorrect?entityId=106125113135&entityType=house&cityId=500000&need_login=1",
+          "houseCompareUrl": "https://house.ke.com/compare/house/detail?hidenav=2&codes=106125113135&cityId=500000&id=106125113135&must_login=1&need_login=1&showShare=1&isRecommend=1"
+        },
+        "share": {
+          "showAgent": true,
+          "showCircle": true,
+          "showMsg": true,
+          "showOsa": false,
+          "showWeixin": true
+        }
+      },
+      "topNavBar": {
+        "correctionUrl": "https://m.ke.com/liverpool/ershoufangCorrect?entityId=106125113135&entityType=house&cityId=500000&need_login=1",
+        "houseCompareUrl": "https://house.ke.com/compare/house/detail?hidenav=2&codes=106125113135&cityId=500000&id=106125113135&must_login=1&need_login=1&showShare=1&isRecommend=1"
+      },
+      "userRelated": {
+        "isFollowed": 0,
+        "isFollowedPrice": 0
+      }
+    },
+    "list": [
+      {
+        "navName": "低首付基础信息",
+        "cardName": "",
+        "navKey": "esfBasicInfo",
+        "cardList": [
+          {
+            "cardPoolType": "headerCard",
+            "info": {
+              "height": 16,
+              "isNotCurrentNav": 0,
+              "disableHeader": true
+            }
+          },
+          {
+            "cardPoolType": "tagsCard",
+            "info": {
+              "colorTags": [
+                {
+                  "desc": "满二",
+                  "color": "#555555",
+                  "bgColor": "#F5F5F5",
+                  "boldFont": 1,
+                  "value": "isTwo",
+                  "guideIcon": "",
+                  "borderRadius": 4
+                },
+                {
+                  "desc": "近地铁",
+                  "color": "#555555",
+                  "bgColor": "#F5F5F5",
+                  "boldFont": 1,
+                  "value": "subwayHouse",
+                  "guideIcon": "",
+                  "borderRadius": 4
+                },
+                {
+                  "desc": "优质户型",
+                  "color": "#555555",
+                  "bgColor": "#F5F5F5",
+                  "boldFont": 1,
+                  "value": "isHighQulityFrame",
+                  "guideIcon": "",
+                  "borderRadius": 4
+                },
+                {
+                  "desc": "全明格局",
+                  "color": "#555555",
+                  "bgColor": "#F5F5F5",
+                  "boldFont": 1,
+                  "value": "isAllBrightPattern",
+                  "guideIcon": "",
+                  "borderRadius": 4
+                },
+                {
+                  "desc": "户型方正",
+                  "color": "#555555",
+                  "bgColor": "#F5F5F5",
+                  "boldFont": 1,
+                  "value": "isSquareFrame",
+                  "guideIcon": "",
+                  "borderRadius": 4
+                },
+                {
+                  "desc": "明厨明卫",
+                  "color": "#555555",
+                  "bgColor": "#F5F5F5",
+                  "boldFont": 1,
+                  "value": "isBrightKitchenToilet",
+                  "guideIcon": "",
+                  "borderRadius": 4
+                }
+              ],
+              "rank": null
+            }
+          },
+          {
+            "cardPoolType": "sellTitleCard",
+            "info": {
+              "title": "南坪 看江精装一房 视野开阔 采光充足"
+            }
+          },
+          {
+            "cardPoolType": "sellBasicCard",
+            "info": {
+              "sellBasic": [
+                {
+                  "name": "售价",
+                  "value": "55",
+                  "valueColor": "E62222",
+                  "unit": "万",
+                  "value2": "",
+                  "unit2": ""
+                },
+                {
+                  "name": "房型",
+                  "value": "1",
+                  "valueColor": "E62222",
+                  "unit": "室",
+                  "value2": "1",
+                  "unit2": "厅"
+                },
+                {
+                  "name": "建筑面积",
+                  "value": "62.06",
+                  "valueColor": "E62222",
+                  "unit": "㎡",
+                  "value2": "",
+                  "unit2": ""
+                }
+              ]
+            }
+          },
+          {
+            "cardPoolType": "priceCard",
+            "info": {
+              "priceInfos": {
+                "actionUrl": {
+                  "app": "/subpackages/ershoufangExtension/pages/newHouseTimeLine/index?houseCode=106125113135&cityId=500000&source_type=ershouDetail",
+                  "h5": "",
+                  "xcx": "/subpackages/ershoufangExtension/pages/newHouseTimeLine/index?houseCode=106125113135&cityId=500000&source_type=ershouDetail"
+                },
+                "housePrice": "单价：8863元/平",
+                "changPriceDesc": "近半年调价2次",
+                "icon": "https://file.ljcdn.com/nebula/kmckdm3423@3x-2_1727062772920.png"
+              },
+              "resblockInfo": {
+                "resblockActionUrl": {
+                  "app": "/subpackages/ershoufang/pages/houseEstDetail/houseEstDetail?resblock_code=3611060282753",
+                  "h5": "",
+                  "xcx": "https://m.ke.com/cq/ershoufang/106125113135.html?"
+                },
+                "bizcircleName": "南岸·融侨半岛",
+                "houseAroundDesc": "附近957米有天台岗小学花园校区",
+                "resblockLocalUrl": {
+                  "app": "/subpackages/other/pages/mapPage/index?cityId=500000&communityid=3611060282753&entityId=3611060282753&entityType=resblock&latitude=29.529752&longitude=106.549018&mainPOI=education_hdic&source=es_house&subKey=",
+                  "h5": "",
+                  "xcx": "/subpackages/other/pages/mapPage/index?cityId=500000&communityid=3611060282753&entityId=3611060282753&entityType=resblock&latitude=29.529752&longitude=106.549018&mainPOI=education_hdic&source=es_house&subKey="
+                },
+                "icon": "https://file.ljcdn.com/nebula/kmckdm3423@3x-2_1727062772920.png",
+                "addrIcon": "https://file.ljcdn.com/nebula/ijruhfhushushush@3x_1730083609956.png"
+              }
+            }
+          },
+          {
+            "cardPoolType": "footCard",
+            "info": {
+              "height": 16
+            }
+          }
+        ]
+      },
+      {
+        "navName": "概览",
+        "cardName": "",
+        "navKey": "houseInfo",
+        "cardList": [
+          {
+            "cardPoolType": "headerCard",
+            "info": {
+              "height": 12,
+              "isNotCurrentNav": 1
+            }
+          },
+          {
+            "cardPoolType": "moduleTabCard",
+            "info": {
+              "list": [
+                {
+                  "navKey": "houseInfo",
+                  "title": "概览"
+                },
+                {
+                  "navKey": "houseMarket",
+                  "title": "动态"
+                },
+                {
+                  "navKey": "houseEvaluate",
+                  "title": "评价"
+                },
+                {
+                  "navKey": "resblock",
+                  "title": "小区"
+                },
+                {
+                  "navKey": "recommended",
+                  "title": "推荐"
+                }
+              ],
+              "isNotCurrentNav": 1
+            }
+          },
+          {
+            "cardPoolType": "lineCard",
+            "info": {
+              "height": "4",
+              "hasInterval": 1,
+              "isNotCurrentNav": 1,
+              "Result": null,
+              "Name": "line_card",
+              "HasChildConcurrencyComponents": false,
+              "ChildConcurrencyComponents": null,
+              "Err": null
+            }
+          },
+          {
+            "cardPoolType": "sellInfoCard",
+            "info": {
+              "list": [
+                {
+                  "icon": "",
+                  "info": [
+                    {
+                      "id": "quanshu",
+                      "icon": "https://file.ljcdn.com/nebula/KIJJI2859@3x-3_1727062424606.png",
+                      "ValType": 0,
+                      "LineType": 0,
+                      "value": "商品房",
+                      "valueColor": "",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "niandai",
+                      "icon": "",
+                      "ValType": 0,
+                      "LineType": 0,
+                      "value": "2008年",
+                      "valueColor": "",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "yongtu",
+                      "icon": "",
+                      "ValType": 0,
+                      "LineType": 0,
+                      "value": "普通住宅",
+                      "valueColor": "",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "louxing",
+                      "icon": "https://file.ljcdn.com/nebula/KIJJI2859@3x-3_1727062424606.png",
+                      "ValType": 0,
+                      "LineType": 0,
+                      "value": "塔楼",
+                      "valueColor": "",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": {
+                        "alertTextMap": {
+                          "content": "塔楼是对<font color=\"#222222\"><b>外观略呈尖塔形的楼房</b></font>的称呼。塔楼楼层通常较高，高层视野较好。此外，大多数的塔楼社区的建筑密度相对较高，每层楼的住户数量通常超过四户，因此房价一般较低。<br/>提示：可在小区详情页查看楼型外观图片",
+                          "iconUrl": "https://file.ljcdn.com/nebula/appapi/beikecp2_1691571605930.png",
+                          "title": "塔楼"
+                        },
+                        "alertTextStr": null,
+                        "louCengAlertText": null
+                      },
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    }
+                  ],
+                  "name": "楼栋",
+                  "id": "loudong"
+                },
+                {
+                  "icon": "",
+                  "info": [
+                    {
+                      "id": "chaoxiang",
+                      "icon": "",
+                      "ValType": 0,
+                      "LineType": 0,
+                      "value": "西南朝向",
+                      "valueColor": "",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": {
+                        "alertTextMap": null,
+                        "alertTextStr": {
+                          "alertText": "因各房屋朝向判定标准不一，此信息仅供参考，请以实地看房为准",
+                          "actionURL": {
+                            "app": "",
+                            "h5": "",
+                            "xcx": ""
+                          }
+                        },
+                        "louCengAlertText": null
+                      },
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "dianti",
+                      "icon": "",
+                      "ValType": 0,
+                      "LineType": 0,
+                      "value": "有电梯",
+                      "valueColor": "",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "louceng",
+                      "icon": "https://file.ljcdn.com/nebula/KIJJI2859@3x-3_1727062424606.png",
+                      "ValType": 0,
+                      "LineType": 0,
+                      "value": "高楼层(共41层)",
+                      "valueColor": "",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": {
+                        "alertTextMap": null,
+                        "alertTextStr": null,
+                        "louCengAlertText": {
+                          "remindImText": "去咨询楼层",
+                          "remind": [
+                            {
+                              "title": "低/中/高楼层如何界定？",
+                              "text": "不同楼栋的低中高层，依据每栋楼的总层数而定，非固定楼层范围。"
+                            },
+                            {
+                              "title": "为什么不直接展示具体楼层？",
+                              "text": "为了保护业主隐私，楼层信息不做直接展示，感谢理解。如有需要，您可向经纪人询问相关情况。"
+                            }
+                          ],
+                          "agentAdInfo": {
+                            "adid": 100013767,
+                            "mediuId": 200000002,
+                            "hdicCityId": "500000",
+                            "ImContent": "请问房子具体在哪层楼？"
+                          }
+                        }
+                      },
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "zixunlouceng",
+                      "icon": "",
+                      "ValType": 1,
+                      "LineType": 0,
+                      "value": "咨询楼层",
+                      "valueColor": "#3072F6",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": {
+                        "adid": 100011348,
+                        "mediuId": 200000002,
+                        "hdicCityId": "500000",
+                        "ImContent": "请问房子具体在哪层楼？"
+                      },
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "taoneimianji",
+                      "icon": "https://file.ljcdn.com/nebula/KIJJI2859@3x-3_1727062424606.png",
+                      "ValType": 0,
+                      "LineType": 0,
+                      "value": "套内面积暂无",
+                      "valueColor": "",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "zixuntiaonei",
+                      "icon": "",
+                      "ValType": 1,
+                      "LineType": 0,
+                      "value": "咨询套内使用面积",
+                      "valueColor": "#3072F6",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": {
+                        "adid": 100012271,
+                        "mediuId": 200000002,
+                        "hdicCityId": "500000",
+                        "ImContent": "您好，请问房子套内面积多大？"
+                      },
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    }
+                  ],
+                  "name": "房源",
+                  "id": "fangyuan"
+                },
+                {
+                  "icon": "",
+                  "info": [
+                    {
+                      "id": "shoufu",
+                      "icon": "https://file.ljcdn.com/nebula/kmckdm3423@3x-2_1727062772920.png",
+                      "ValType": 2,
+                      "LineType": 0,
+                      "value": "首付约11万起",
+                      "valueColor": "",
+                      "valueAction": {
+                        "app": "https://tax.jiaoyi.ke.com/sf/detail?cityCode=500000&houseCode=106125113135&taxStatus=0&source=beike&ots=1777432761000&cjj=550000&sk=ce16e764aeaade03a0a4930818857c53",
+                        "h5": "",
+                        "xcx": "https://tax.jiaoyi.ke.com/sf/detail?cityCode=500000&houseCode=106125113135&taxStatus=0&source=beike&ots=1777432761000&cjj=550000&sk=ce16e764aeaade03a0a4930818857c53"
+                      },
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": {
+                        "adid": 100013043,
+                        "mediuId": 200000002,
+                        "hdicCityId": "500000",
+                        "ImContent": "请帮我算一下这套房子的首付和税费~"
+                      },
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "zixunshoufu",
+                      "icon": "",
+                      "ValType": 1,
+                      "LineType": 0,
+                      "value": "咨询首付及税费",
+                      "valueColor": "#3072F6",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": {
+                        "adid": 100013043,
+                        "mediuId": 200000002,
+                        "hdicCityId": "500000",
+                        "ImContent": "请帮我算一下这套房子的首付和税费是多少？"
+                      },
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    }
+                  ],
+                  "name": "费用",
+                  "id": "feiyong"
+                },
+                {
+                  "icon": "",
+                  "info": [
+                    {
+                      "id": "xiaoqu",
+                      "icon": "",
+                      "ValType": 2,
+                      "LineType": 1,
+                      "value": "双子星座(南岸·融侨半岛)",
+                      "valueColor": "",
+                      "valueAction": {
+                        "app": "lianjiabeike://community/detailv4?communityid=3611060282753",
+                        "h5": "",
+                        "xcx": "/subpackages/ershoufang/pages/houseEstDetail/houseEstDetail?resblock_code=3611060282753"
+                      },
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    }
+                  ],
+                  "name": "小区",
+                  "id": "xiaoqu"
+                },
+                {
+                  "icon": "",
+                  "info": [
+                    {
+                      "id": "tihubi",
+                      "icon": "https://file.ljcdn.com/nebula/kmckdm3423@3x-2_1727062772920.png",
+                      "ValType": 3,
+                      "LineType": 1,
+                      "value": "梯户比、供暖方式、交易历史、挂牌时间等",
+                      "valueColor": "",
+                      "valueAction": null,
+                      "moreParam": {
+                        "houseCode": "106125113135",
+                        "strategyInfo": "",
+                        "shareAgentUcid": ""
+                      },
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    }
+                  ],
+                  "name": "更多",
+                  "id": "gengduo"
+                },
+                {
+                  "icon": "",
+                  "info": [
+                    {
+                      "id": "chengnuo",
+                      "icon": "https://file.ljcdn.com/nebula/wswssw3193@3x-2_1727061611660.png",
+                      "ValType": 1,
+                      "LineType": 0,
+                      "value": "服务承诺·全程守护",
+                      "valueColor": "#3072F6",
+                      "valueAction": {
+                        "app": "http://con-protection.ke.com/protection/introduction?cityId=500000&bizType=ershou",
+                        "h5": "",
+                        "xcx": "https://con-protection.ke.com/protection/introduction?cityId=500000&bizType=ershou"
+                      },
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "feilv",
+                      "icon": "https://file.ljcdn.com/nebula/DJJDJDJ2868@3x-2_1727061877990.png",
+                      "ValType": 1,
+                      "LineType": 0,
+                      "value": "服务费率",
+                      "valueColor": "#3072F6",
+                      "valueAction": {
+                        "app": "lianjiabeike://photobrowser/customerservices?current_index=lighting_parlor_0&photobrowser_style=0&urls_json_string=%7B%22count%22%3A14%2C%22list%22%3A%5B%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2Fad6c5556-518a-441c-9654-f8d358677e9e.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg0%22%2C%22location%22%3A%22location0%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2F10401bab-a1c0-46a6-8c2a-590f543736e4.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg1%22%2C%22location%22%3A%22location1%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2Fab0e1fa6-425e-4399-ab6e-298d66bd7101.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg2%22%2C%22location%22%3A%22location2%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2Fe6f430e9-3f85-4dcc-bfd7-a98903e5b0be.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg3%22%2C%22location%22%3A%22location3%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2F5315ac9c-7d3a-42b9-80b1-99e6f0531c8c.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg4%22%2C%22location%22%3A%22location4%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2Fc3a52a9a-78cd-48ea-91bc-c2394a2c43e9.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg5%22%2C%22location%22%3A%22location5%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2F1e4286f4-60f2-4932-9f2e-7e215c2dac24.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg6%22%2C%22location%22%3A%22location6%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2Fe2df0aca-c9ea-4aa9-964b-0bbb086fabc6.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg7%22%2C%22location%22%3A%22location7%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2Fd4195f83-db75-4494-b933-687855a8a748.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg8%22%2C%22location%22%3A%22location8%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2F9b11aa89-235d-48e8-a911-e932b3a3fdda.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg9%22%2C%22location%22%3A%22location9%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2F893fdd1f-7bdb-4b72-b0e8-3d3ce6327e47.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg10%22%2C%22location%22%3A%22location10%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2F6ce2ea1f-0ce4-489c-9938-99aa581a401d.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg11%22%2C%22location%22%3A%22location11%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2Fa5f328a3-174f-46b3-a791-7b853bd14742.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg12%22%2C%22location%22%3A%22location12%22%7D%2C%7B%22imageUrl%22%3A%22https%3A%2F%2Fke-image.ljcdn.com%2Fehr-personnel%2Ffd400b7e-d25b-4353-a3a1-b7b910a363b7.jpg%3Ffrom%3Dke.com%22%2C%22key%22%3A%22feilvimg13%22%2C%22location%22%3A%22location13%22%7D%5D%7D",
+                        "h5": "",
+                        "xcx": ""
+                      },
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": [
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/ad6c5556-518a-441c-9654-f8d358677e9e.jpg?from=ke.com",
+                          "key": "feilvimg0",
+                          "location": "location0"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/10401bab-a1c0-46a6-8c2a-590f543736e4.jpg?from=ke.com",
+                          "key": "feilvimg1",
+                          "location": "location1"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/ab0e1fa6-425e-4399-ab6e-298d66bd7101.jpg?from=ke.com",
+                          "key": "feilvimg2",
+                          "location": "location2"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/e6f430e9-3f85-4dcc-bfd7-a98903e5b0be.jpg?from=ke.com",
+                          "key": "feilvimg3",
+                          "location": "location3"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/5315ac9c-7d3a-42b9-80b1-99e6f0531c8c.jpg?from=ke.com",
+                          "key": "feilvimg4",
+                          "location": "location4"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/c3a52a9a-78cd-48ea-91bc-c2394a2c43e9.jpg?from=ke.com",
+                          "key": "feilvimg5",
+                          "location": "location5"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/1e4286f4-60f2-4932-9f2e-7e215c2dac24.jpg?from=ke.com",
+                          "key": "feilvimg6",
+                          "location": "location6"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/e2df0aca-c9ea-4aa9-964b-0bbb086fabc6.jpg?from=ke.com",
+                          "key": "feilvimg7",
+                          "location": "location7"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/d4195f83-db75-4494-b933-687855a8a748.jpg?from=ke.com",
+                          "key": "feilvimg8",
+                          "location": "location8"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/9b11aa89-235d-48e8-a911-e932b3a3fdda.jpg?from=ke.com",
+                          "key": "feilvimg9",
+                          "location": "location9"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/893fdd1f-7bdb-4b72-b0e8-3d3ce6327e47.jpg?from=ke.com",
+                          "key": "feilvimg10",
+                          "location": "location10"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/6ce2ea1f-0ce4-489c-9938-99aa581a401d.jpg?from=ke.com",
+                          "key": "feilvimg11",
+                          "location": "location11"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/a5f328a3-174f-46b3-a791-7b853bd14742.jpg?from=ke.com",
+                          "key": "feilvimg12",
+                          "location": "location12"
+                        },
+                        {
+                          "imageUrl": "https://ke-image.ljcdn.com/ehr-personnel/fd400b7e-d25b-4353-a3a1-b7b910a363b7.jpg?from=ke.com",
+                          "key": "feilvimg13",
+                          "location": "location13"
+                        }
+                      ],
+                      "content": null,
+                      "abTest": "",
+                      "TextBt": ""
+                    },
+                    {
+                      "id": "heyan",
+                      "icon": "https://file.ljcdn.com/nebula/imghandle/common/组3583@3x_1732604444209.png",
+                      "ValType": 3,
+                      "LineType": 0,
+                      "value": "房源查验",
+                      "valueColor": "#3072F6",
+                      "valueAction": null,
+                      "moreParam": null,
+                      "alertText": null,
+                      "position": null,
+                      "agentAdInfo": null,
+                      "feilvXcxImgArr": null,
+                      "content": {
+                        "cardList": [
+                          {
+                            "cardType": "certificateCard",
+                            "actionUrl": "",
+                            "icon": "https://img.ljcdn.com/beike/haofang/1639558135341.png",
+                            "title": "房源发布机构",
+                            "digValue": "发布机构",
+                            "extra": {
+                              "list": [
+                                {
+                                  "certCode": "",
+                                  "jumpContent": "企业信用信息查询网址：http://www.gsxt.gov.cn/index.html",
+                                  "name": "营业执照",
+                                  "path": "https://img.ljcdn.com/ehr-personnel/20190111100344641LQMQ0ZNF.jpg",
+                                  "showContent": null
+                                },
+                                {
+                                  "certCode": "南岸区县（自治县）2016字第0069号",
+                                  "jumpContent": "房地产经纪机构及其分支机构到所在直辖市、市、县人民政府建设（房地产）主管部门办理备案手续所取得的相关备案证明。",
+                                  "name": "经纪备案",
+                                  "path": "https://image1.ljcdn.com/ehr-personnel/20190108180804890B5IW0ZJU.png",
+                                  "showContent": null
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "cardType": "declareInfoCard",
+                            "actionUrl": "https://m.ke.com/text/disclaimer",
+                            "icon": "https://img.ljcdn.com/beike/haofang/1639558129454.png",
+                            "title": "风险提示",
+                            "digValue": "风险提示"
+                          }
+                        ],
+                        "houseReport": {
+                          "actionUrl": "https://m.ke.com//my/userreport/editpage?house_type=1&source_type=2&source_entry=1&house_id=106125113135&is_new_report=1",
+                          "buttonTitle": "举报该房源",
+                          "canReport": 1,
+                          "desc": "1.房源所示“户型图、房屋用途、交易权属、建成年代、产权年限、建筑结构”仅供参考，购房时请以房本信息为准。\n2.房源介绍中的周边配套、在建设施、规划设施、地铁信息、绿化率、得房率、容积率等信息为通过物业介绍、房产证、实勘、政府官网等渠道获取，因时间、政策会发生变化，与实际情况可能略有偏差，房源介绍仅供参考。\n3.房源介绍中与距离相关的数据均来源于百度地图。",
+                          "title": "房源编号106125113135",
+                          "houseCode": "106125113135"
+                        }
+                      },
+                      "abTest": "",
+                      "TextBt": ""
+                    }
+                  ],
+                  "name": "",
+                  "id": "fuwuchengnuo"
+                }
+              ]
+            }
+          },
+          {
+            "cardPoolType": "footCard",
+            "info": {
+              "height": 18
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "cost_real": 217
+}

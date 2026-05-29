@@ -1,0 +1,42 @@
+@import "../ershoudetail/index.wxss";
+
+.position-row {
+  margin-top: 8rpx;
+}
+
+.special-loan-row {
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.loan-label {
+  color: #64748b;
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 38rpx;
+}
+
+.loan-value {
+  color: #f04438;
+  font-size: 30rpx;
+  font-weight: 900;
+  line-height: 38rpx;
+}
+
+.loan-gap {
+  margin-left: 32rpx;
+}
+
+.desc-card {
+  margin-top: 22rpx;
+  padding: 20rpx;
+  border-radius: 16rpx;
+  background: #fff7ed;
+  border: 1rpx solid #fed7aa;
+}
+
+.desc-text {
+  color: #4b5563;
+  font-size: 24rpx;
+  line-height: 38rpx;
+}

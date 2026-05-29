@@ -1,0 +1,177 @@
+<view class="page">
+  <view class="content fixed-panel">
+    <view class="search-row">
+      <view class="search-box">
+        <view class="search-left">
+          <image class="city-icon" src="/assets/icons/city-icon.png" mode="aspectFit" />
+          <input
+            class="search-input"
+            type="text"
+            placeholder=""
+            placeholder-class="search-placeholder"
+            confirm-type="search"
+            maxlength="50"
+            cursor-spacing="20"
+            value="{{keyword}}"
+            bindinput="onKeywordInput"
+            bindconfirm="onSearchConfirm"
+          />
+        </view>
+        <view class="search-btn" bindtap="onSearchTap">搜索</view>
+      </view>
+      <view class="map-entry" bindtap="onMapEntryTap">
+        <image class="map-entry-icon" src="/assets/icons/icon_ditu.png" mode="aspectFit" />
+        <text class="map-entry-text">地图找房</text>
+      </view>
+    </view>
+
+    <view class="stats-row">
+      <view class="stats-card stats-card-new" data-type="0" bindtap="onStatCardTap">
+        <view class="stats-content">
+          <text class="stats-label">今日新增:</text>
+          <view class="stats-value-wrap">
+            <text class="stats-value">{{auctionStats.todayIncreaseCount}}</text>
+            <text class="stats-unit">套</text>
+          </view>
+        </view>
+        <view class="stats-mark stats-mark-new">
+          <text class="stats-mark-text">NEW</text>
+        </view>
+      </view>
+      <view class="stats-card stats-card-running" data-type="1" bindtap="onStatCardTap">
+        <view class="stats-content">
+          <text class="stats-label">正在拍卖:</text>
+          <view class="stats-value-wrap">
+            <text class="stats-value">{{auctionStats.auctioningCount}}</text>
+            <text class="stats-unit">套</text>
+          </view>
+        </view>
+        <view class="stats-mark stats-mark-running">
+          <view class="stats-gavel-head"></view>
+          <view class="stats-gavel-handle"></view>
+        </view>
+      </view>
+      <view class="stats-card stats-card-coming" data-type="2" bindtap="onStatCardTap">
+        <view class="stats-content">
+          <text class="stats-label">即将拍卖:</text>
+          <view class="stats-value-wrap">
+            <text class="stats-value">{{auctionStats.comeAuctioningCount}}</text>
+            <text class="stats-unit">套</text>
+          </view>
+        </view>
+        <view class="stats-mark stats-mark-coming">
+          <view class="stats-clock-face"></view>
+          <view class="stats-clock-hand stats-clock-hour"></view>
+          <view class="stats-clock-hand stats-clock-minute"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="filter-row">
+      <picker mode="selector" range="{{filterOptions.area}}" value="{{filterIndex.area}}" bindchange="onAreaFilterChange">
+        <view class="filter-item {{filterIndex.area > 0 ? 'filter-item-active' : ''}}">
+          <text class="filter-text">{{filterIndex.area === 0 ? '重庆市区' : filterOptions.area[filterIndex.area]}}</text>
+          <text class="filter-arrow">▼</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{filterOptions.layout}}" value="{{filterIndex.layout}}" bindchange="onLayoutFilterChange">
+        <view class="filter-item {{filterIndex.layout > 0 ? 'filter-item-active' : ''}}">
+          <text class="filter-text">{{filterOptions.layout[filterIndex.layout]}}</text>
+          <text class="filter-arrow">▼</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{filterOptions.rent}}" value="{{filterIndex.rent}}" bindchange="onRentFilterChange">
+        <view class="filter-item {{filterIndex.rent > 0 ? 'filter-item-active' : ''}}">
+          <text class="filter-text">{{filterOptions.rent[filterIndex.rent]}}</text>
+          <text class="filter-arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+  <scroll-view class="list-scroll" scroll-y lower-threshold="120" bindscrolltolower="onLoadMore">
+    <view class="content list-content">
+      <view class="waterfall">
+      <view class="left-col">
+        <block wx:for="{{feedLeft}}" wx:key="id">
+          <view class="house-card" data-id="{{item.id}}" bindtap="onHouseTap">
+            <view class="house-image-wrap">
+              <image class="house-image" src="{{item.image}}" mode="aspectFill"></image>
+              <image class="auction-mode-badge" wx:if="{{item.auctionModeBadge}}" src="{{item.auctionModeBadge}}" mode="aspectFit" />
+              <view class="community-overlay">
+                <text class="community-text">{{item.communityNameText}}</text>
+              </view>
+            </view>
+            <view class="house-content">
+              <text class="house-title">{{item.position}}</text>
+              <view class="house-meta-line meta-tags">
+                <text class="meta-chip chip-area">{{item.areaText}}</text>
+                <text class="meta-chip" wx:if="{{item.layoutText}}">{{item.layoutText}}</text>
+                <text class="meta-chip" wx:if="{{item.orientationText}}">{{item.orientationText}}</text>
+              </view>
+              <view class="price-line">
+                <view class="price-item price-main">
+                  <text class="price-label-main">起拍价</text>
+                  <text class="price-start">{{item.startingPriceText}}</text>
+                </view>
+                <view class="price-item price-market-wrap">
+                  <text class="price-label-sub">市场价</text>
+                  <text class="price-market">{{item.marketPriceText}}</text>
+                </view>
+              </view>
+              <view class="status-line">
+                <text class="status-label status-{{item.auctionStatusType}}">{{item.auctionStatusText}}</text>
+                <text class="time-text">{{item.auctionTimeText}}</text>
+              </view>
+            </view>
+          </view>
+        </block>
+      </view>
+      <view class="right-col">
+        <block wx:for="{{feedRight}}" wx:key="id">
+          <view class="house-card" data-id="{{item.id}}" bindtap="onHouseTap">
+            <view class="house-image-wrap">
+              <image class="house-image" src="{{item.image}}" mode="aspectFill"></image>
+              <image class="auction-mode-badge" wx:if="{{item.auctionModeBadge}}" src="{{item.auctionModeBadge}}" mode="aspectFit" />
+              <view class="community-overlay">
+                <text class="community-text">{{item.communityNameText}}</text>
+              </view>
+            </view>
+            <view class="house-content">
+              <text class="house-title">{{item.position}}</text>
+              <view class="house-meta-line meta-tags">
+                <text class="meta-chip chip-area">{{item.areaText}}</text>
+                <text class="meta-chip" wx:if="{{item.layoutText}}">{{item.layoutText}}</text>
+                <text class="meta-chip" wx:if="{{item.orientationText}}">{{item.orientationText}}</text>
+              </view>
+              <view class="price-line">
+                <view class="price-item price-main">
+                  <text class="price-label-main">起拍价</text>
+                  <text class="price-start">{{item.startingPriceText}}</text>
+                </view>
+                <view class="price-item price-market-wrap">
+                  <text class="price-label-sub">市场价</text>
+                  <text class="price-market">{{item.marketPriceText}}</text>
+                </view>
+              </view>
+              <view class="status-line">
+                <text class="status-label status-{{item.auctionStatusType}}">{{item.auctionStatusText}}</text>
+                <text class="time-text">{{item.auctionTimeText}}</text>
+              </view>
+            </view>
+          </view>
+        </block>
+      </view>
+      </view>
+      <view class="load-more-tip" wx:if="{{(wechatTestResult.canShareMiniProgram || (wechatTestResult.accessGranted && (wechatTestResult.matchedPerson || (wechatTestResult.binding && wechatTestResult.binding.salesOpenid)))) && !hasMore}}">没有更多了</view>
+    </view>
+  </scroll-view>
+  <view class="phone-auth-mask" wx:if="{{showPhoneAuthDialog}}">
+    <view class="phone-auth-dialog">
+      <text class="phone-auth-title">需要获取手机号</text>
+      <view class="phone-auth-actions">
+        <button class="phone-auth-btn phone-auth-cancel" bindtap="onRejectPhoneAuth">拒绝</button>
+        <button class="phone-auth-btn phone-auth-confirm" open-type="getPhoneNumber" bindgetphonenumber="onBindStaffPhone">同意进入</button>
+      </view>
+    </view>
+  </view>
+</view>

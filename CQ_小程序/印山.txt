@@ -1,0 +1,86 @@
+服务器
+
+
+数据抓取 --- 每日抓取 （定时任务） ----- 存入数据库  ----- 接口查询数据 
+
+列表获取接口 
+pageNum=4&pageSize=10&cityName=重庆市区&houseTypeId=2
+https://api.ysfp.com.cn/api/house/index/list?pageNum=4&pageSize=10&cityName=重庆市区&houseTypeId=2
+
+房屋详情
+
+https://api.ysfp.com.cn/api/house/detail/{id}
+
+
+获取 成交均价/今日新增/正在拍卖/即将拍卖  数据
+https://api.ysfp.com.cn/api/common/service/tel?cityName=重庆市区
+  "averageTransactionPrice": "7688",   成交均价
+    "auctioningCount": "446", 正在拍卖
+    "comeAuctioningCount": "958", 即将拍卖
+    "todayIncreaseCount": 13 今日新增
+
+
+
+热门地区：
+https://api.ysfp.com.cn/api/common/hot-search/list
+
+关键字 查询
+https://api.ysfp.com.cn/api/house/index/list?pageNum=1&pageSize=10&searchName=恒大&houseTypeId=2&cityName=重庆市区
+
+
+区域选项：
+https://api.ysfp.com.cn/api/common/area/distList?cityName=重庆市区
+
+面积选项
+https://api.ysfp.com.cn/dictDetail/area_query
+
+价格选项
+https://api.ysfp.com.cn/dictDetail/total_price_query
+
+
+地图 
+
+聚合点 数据  区域---> 数量 
+
+houseTypeId=2  法拍住宅
+houseTypeId=1  法拍商业
+houseTypeId=3  法拍工业
+
+eg：法拍住宅
+https://api.ysfp.com.cn/api/map/district/getDistrictHouseCount?cityName=重庆市区&houseTypeId=2&type=0
+{
+  "code": 200,
+  "msg": "SUCCESS",
+  "data": [
+    {
+      "areaName": "渝北区",
+      "districtId": 18055,
+      "location": "106.631124,29.71812",
+      "houseCount": "350"
+    },
+  ]
+}
+
+具体某个区域数据
+https://api.ysfp.com.cn/api/map/district/dataMap   post
+{
+  "cityName": "重庆市区",
+  "lineName": "",
+  "stationName": [],
+  "houseTypeId": 2,
+  "type": 0,
+  "maxLatitude": 29.652038565198133,
+  "minLatitude": 29.560388609060116,
+  "maxLongitude": 106.61019060444221,
+  "minLongitude": 106.53859939555775
+}
+
+点击某个小区数据   communityName 这个字段数据来源于 上面 区域数据
+https://api.ysfp.com.cn/api/map/community/house/list?districtCommunityId=0&pageNum=1&pageSize=99&sort=0&cityName=重庆市区&houseTypeId=2&communityName=巨宇融鑫花园
+
+
+
+
+
+
+

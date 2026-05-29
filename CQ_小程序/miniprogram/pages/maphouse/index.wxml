@@ -1,0 +1,92 @@
+<view class="map-page">
+  <view class="top-panel">
+    <view wx:if="{{sourceType === 'auction'}}" class="type-tabs">
+      <block wx:for="{{houseTypeTabs}}" wx:key="id">
+        <view
+          class="type-tab {{activeHouseTypeId === item.id ? 'type-tab-active' : ''}}"
+          data-typeid="{{item.id}}"
+          bindtap="onHouseTypeTabTap"
+        >
+          {{item.label}}
+        </view>
+      </block>
+    </view>
+    <view wx:else class="ershou-head">
+      <view class="ershou-title">{{pageTitle}}</view>
+      <view class="ershou-desc">{{pageDesc}}</view>
+    </view>
+  </view>
+
+  <view class="map-wrap">
+    <map
+      id="houseMap"
+      class="house-map"
+      longitude="{{longitude}}"
+      latitude="{{latitude}}"
+      scale="{{scale}}"
+      min-scale="{{minScale}}"
+      max-scale="{{maxScale}}"
+      markers="{{markers}}"
+      polyline="{{polylines}}"
+      show-location
+      enable-zoom
+      enable-scroll
+      bindmarkertap="onMarkerTap"
+      bindcallouttap="onCalloutTap"
+      bindregionchange="onRegionChange"
+    />
+
+    <view class="loading-tip" wx:if="{{loading}}">{{loadingText}}</view>
+
+    <view class="drawer-mask" wx:if="{{drawerVisible}}" bindtap="onDrawerMaskTap"></view>
+    <view class="ershou-drawer" wx:if="{{drawerVisible}}" catchtap="noop">
+      <view class="drawer-handle"></view>
+      <view class="drawer-head">
+        <view class="drawer-title-wrap">
+          <view class="drawer-title">{{activeCommunityName}}</view>
+          <view class="drawer-subtitle">当前小区低首付房源</view>
+        </view>
+        <view class="drawer-close" bindtap="onDrawerCloseTap">关闭</view>
+      </view>
+
+      <scroll-view class="drawer-list" scroll-y>
+        <block wx:for="{{activeCommunityListings}}" wx:key="id">
+          <view
+            class="drawer-card"
+            data-id="{{item.id}}"
+            data-housecode="{{item.houseCode}}"
+            bindtap="onErshouHouseTap"
+          >
+            <image wx:if="{{item.hasImage}}" class="drawer-card-image" src="{{item.image}}" mode="aspectFill"></image>
+            <view wx:else class="drawer-card-image empty-resource">
+              <view class="empty-resource-icon">
+                <view class="empty-resource-roof"></view>
+                <view class="empty-resource-house">
+                  <view class="empty-resource-door"></view>
+                </view>
+              </view>
+              <text class="empty-resource-text">暂无图片</text>
+            </view>
+
+            <view class="drawer-card-body">
+              <view class="drawer-card-title">{{item.title}}</view>
+              <view class="drawer-card-tags">
+                <text class="drawer-tag drawer-tag-area" wx:if="{{item.areaText}}">{{item.areaText}}</text>
+                <text class="drawer-tag" wx:if="{{item.layoutText}}">{{item.layoutText}}</text>
+                <text class="drawer-tag" wx:if="{{item.orientationText}}">{{item.orientationText}}</text>
+              </view>
+              <view class="drawer-price-row">
+                <text class="drawer-price-main">{{item.totalPriceText}}</text>
+                <text class="drawer-price-sub">{{item.unitPriceText}}</text>
+              </view>
+              <view class="drawer-loan-row">
+                <text class="drawer-loan-item">首付 {{item.downPaymentText}}</text>
+                <text class="drawer-loan-item drawer-loan-monthly">月供 {{item.monthlyPaymentText}}</text>
+              </view>
+            </view>
+          </view>
+        </block>
+      </scroll-view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,73 @@
+<view class="detail-page">
+  <view class="detail-body">
+    <view class="banner-wrap">
+      <swiper wx:if="{{asset.hasImages}}" class="banner" indicator-dots duration="300" touchable current="{{currentImageIndex}}" bindchange="onSwiperChange">
+        <swiper-item wx:for="{{asset.images}}" wx:key="*this">
+          <image class="banner-image" src="{{item}}" mode="aspectFill" />
+        </swiper-item>
+      </swiper>
+      <view wx:else class="banner empty-resource">
+        <view class="empty-resource-icon">
+          <view class="empty-resource-roof"></view>
+          <view class="empty-resource-house">
+            <view class="empty-resource-door"></view>
+          </view>
+        </view>
+        <text class="empty-resource-text">暂无资源</text>
+      </view>
+      <view wx:if="{{asset.hasImages}}" class="banner-index">{{currentImageIndex + 1}} / {{asset.images.length || 1}}</view>
+      <view wx:if="{{asset.hasImages}}" class="preview-btn" bindtap="onPreviewCurrentImage">预览大图</view>
+    </view>
+
+    <view class="detail-content">
+      <view class="title-row">{{asset.title}}</view>
+      <view class="position-row">{{asset.position}}</view>
+      <view class="price-row">
+        <text class="price-label">总价：</text>
+        <text class="price-start">{{asset.totalPriceText}}</text>
+        <text class="price-gap">单价：</text>
+        <text class="price-market">{{asset.unitPriceText}}</text>
+      </view>
+      <view class="loan-row special-loan-row">
+        <text class="loan-label">首付 </text>
+        <text class="loan-value">{{asset.downPaymentText}}</text>
+        <text class="loan-label loan-gap">月供 </text>
+        <text class="loan-value">{{asset.monthlyPaymentText}}</text>
+      </view>
+      <view class="meta-row">
+        <text>{{asset.layoutText || '户型暂无'}}</text>
+        <text class="meta-gap">|</text>
+        <text>{{asset.areaText}}</text>
+        <text class="meta-orientation" wx:if="{{asset.orientationText}}">| {{asset.orientationText}}</text>
+      </view>
+      <view class="desc-card" wx:if="{{asset.desc}}">
+        <view class="card-title">资产描述</view>
+        <view class="desc-text">{{asset.desc}}</view>
+      </view>
+      <view class="info-card">
+        <view class="card-title">资产信息</view>
+        <view class="info-grid">
+          <view class="info-item" wx:for="{{asset.infoList}}" wx:key="label">
+            <text class="info-label">{{item.label}}</text>
+            <text class="info-value">{{item.value}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="content-bottom-space"></view>
+  </view>
+
+  <view class="fixed-contact-bar">
+    <view class="contact-left">
+      <view class="contact-avatar default-avatar">
+        <view class="avatar-head"></view>
+        <view class="avatar-body"></view>
+      </view>
+      <view class="contact-info">
+        <text class="contact-name">{{asset.contactName}}</text>
+        <text class="contact-phone">{{asset.contactPhone || '暂无联系电话'}}</text>
+      </view>
+    </view>
+    <button class="call-btn" hover-class="none" bindtap="onCallTap">打电话</button>
+  </view>
+</view>

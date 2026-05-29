@@ -1,0 +1,49 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/ershou/index",
+    "pages/specialassets/index",
+    "pages/specialassetdetail/index",
+    "pages/ershoudetail/index",
+    "pages/houselist/index",
+    "pages/housedetail/index",
+    "pages/houselocation/index",
+    "pages/auctionlist/index",
+    "pages/maphouse/index",
+    "pages/logs/logs"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "\u6cd5\u62cd\u623f",
+    "navigationBarBackgroundColor": "#ffffff"
+  },
+  "style": "v2",
+  "tabBar": {
+    "custom": true,
+    "color": "#8f949e",
+    "selectedColor": "#151821",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "法拍房"
+      },
+      {
+        "pagePath": "pages/ershou/index",
+        "text": "低首付"
+      },
+      {
+        "pagePath": "pages/specialassets/index",
+        "text": "特殊资产"
+      }
+    ]
+  },
+  "componentFramework": "glass-easel",
+  "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.userLocation": {
+      "desc": "\u4f60\u7684\u4f4d\u7f6e\u4fe1\u606f\u5c06\u7528\u4e8e\u5c0f\u7a0b\u5e8f\u4f4d\u7f6e\u63a5\u53e3\u7684\u6548\u679c\u5c55\u793a"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+.location-page {
+  position: relative;
+  height: 100vh;
+  background: #f5f6f8;
+}
+
+.location-map {
+  width: 100%;
+  height: 100%;
+}
+
+.location-card {
+  position: absolute;
+  left: 20rpx;
+  right: 20rpx;
+  bottom: 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 18rpx 20rpx;
+  box-shadow: 0 8rpx 24rpx rgba(15, 23, 42, 0.14);
+}
+
+.location-title {
+  color: #1f232d;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 40rpx;
+}
+
+.location-address {
+  margin-top: 8rpx;
+  color: #6b7280;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
