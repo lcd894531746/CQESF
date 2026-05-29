@@ -1,7 +1,7 @@
 const { DJL_SYNC_TASK_TABLE_NAME } = require('./djlSyncSchema');
 
-const DEFAULT_PAGE_SIZE = 10;
-const MAX_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 100;
+const MAX_PAGE_SIZE = 100;
 
 function toPositiveInt(value, fallback) {
   const parsed = parseInt(value, 10);

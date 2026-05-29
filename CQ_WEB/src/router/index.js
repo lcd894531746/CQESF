@@ -6,6 +6,7 @@ import HousePage from '../pages/HousePage.vue'
 import SpecialAssetsPage from '../pages/SpecialAssetsPage.vue'
 import BasicDataPage from '../pages/BasicDataPage.vue'
 import ApprovalTasksPage from '../pages/ApprovalTasksPage.vue'
+import DjlSyncLogsPage from '../pages/DjlSyncLogsPage.vue'
 import { AUTH_KEY, getAuthRole, getAuthToken, getDefaultRouteByRole, hasRoleAtMostLevel } from '../constants/auth'
 
 const router = createRouter({
@@ -43,6 +44,12 @@ const router = createRouter({
           path: 'basic-data',
           name: 'basic-data',
           component: BasicDataPage,
+          meta: { minLevel: 1 },
+        },
+        {
+          path: 'djl-sync-logs',
+          name: 'djl-sync-logs',
+          component: DjlSyncLogsPage,
           meta: { minLevel: 1 },
         },
         {

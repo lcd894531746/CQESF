@@ -20,7 +20,13 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-import pymysql
+try:
+    import pymysql
+except ModuleNotFoundError as error:
+    if error.name == "pymysql":
+        print("[依赖缺失] 未安装 PyMySQL，请先执行：pip install -r requirements.txt", file=sys.stderr)
+        raise SystemExit(1)
+    raise
 
 
 CURRENT_DIR = Path(__file__).resolve().parent
