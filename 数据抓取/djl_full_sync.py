@@ -1088,6 +1088,41 @@ def upsert_sync(connection, districts: List[DistrictRow], sub_areas: List[SubAre
         stale_community_ids = sorted(existing_community_ids - set(fresh_community_ids))
         deleted_community_count = delete_in_chunks(cursor, "djl_community_map_rel", "community_id", stale_community_ids)
 
+        cursor.execute(
+            """
+            UPDATE djl_map_district_rel d
+            LEFT JOIN (
+              SELECT
+                h.area_code,
+                COUNT(*) AS sale_count,
+                COUNT(DISTINCT h.community_id) AS community_count,
+                ROUND(
+                  AVG(
+                    CASE
+                      WHEN TRIM(COALESCE(c.community_avg_price_text, '')) <> ''
+                        THEN CAST(TRIM(c.community_avg_price_text) AS DECIMAL(10, 2))
+                      ELSE NULL
+                    END
+                  ),
+                  1
+                ) AS avg_unit_price
+              FROM djl_esf_house_detail h
+              LEFT JOIN djl_community_map_rel c
+                ON c.community_id = h.community_id
+              GROUP BY h.area_code
+            ) x ON x.area_code = d.area_code
+            SET d.sale_count = COALESCE(x.sale_count, 0),
+                d.community_count = COALESCE(x.community_count, 0),
+                d.avg_price_text = CASE
+                  WHEN x.avg_unit_price IS NULL THEN ''
+                  WHEN MOD(x.avg_unit_price, 1) = 0 THEN CONCAT(CAST(x.avg_unit_price AS UNSIGNED), '元/㎡')
+                  ELSE CONCAT(x.avg_unit_price, '元/㎡')
+                END
+            """
+        )
+        connection.commit()
+        return
+
         log(f"  [删除] 房源 {deleted_house_count} 条 | 小区 {deleted_community_count} 条")
 
         cursor.execute(
