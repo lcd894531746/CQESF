@@ -14,6 +14,7 @@ import sys
 import time
 import traceback
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
@@ -232,6 +233,10 @@ class CommunityRow:
 
 def log(message: str) -> None:
     print(message, flush=True)
+
+
+def get_china_datetime_string() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def load_env_file(env_path: Path) -> Dict[str, str]:
@@ -1017,9 +1022,9 @@ def upsert_sync(connection, districts: List[DistrictRow], sub_areas: List[SubAre
             cursor.execute(
                 """
                 INSERT INTO djl_esf_house_detail
-                  (listing_id, title, listing_url, area_code, area_name, sub_area_name, community_id, community_name, longitude_bd09, latitude_bd09, total_price_wan, unit_price_text, house_type, build_area_sqm, decoration, orientation, building_year, building_structure, property_fee_text, usage_type, elevator_text, floor_text, metro_text, house_location_text, tags_text, vr_url, cover_image_url, image_urls_json, community_info_json)
+                  (listing_id, title, listing_url, area_code, area_name, sub_area_name, community_id, community_name, longitude_bd09, latitude_bd09, total_price_wan, unit_price_text, house_type, build_area_sqm, decoration, orientation, building_year, building_structure, property_fee_text, usage_type, elevator_text, floor_text, metro_text, house_location_text, tags_text, vr_url, cover_image_url, image_urls_json, community_info_json, created_at)
                 VALUES
-                  (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                  (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                   title = VALUES(title),
                   listing_url = VALUES(listing_url),
@@ -1048,7 +1053,8 @@ def upsert_sync(connection, districts: List[DistrictRow], sub_areas: List[SubAre
                   vr_url = VALUES(vr_url),
                   cover_image_url = VALUES(cover_image_url),
                   image_urls_json = VALUES(image_urls_json),
-                  community_info_json = VALUES(community_info_json)
+                  community_info_json = VALUES(community_info_json),
+                  created_at = VALUES(created_at)
                 """,
                 (
                     house.listing_id,
@@ -1080,6 +1086,7 @@ def upsert_sync(connection, districts: List[DistrictRow], sub_areas: List[SubAre
                     house.cover_image_url,
                     house.image_urls_json,
                     house.community_info_json,
+                    get_china_datetime_string(),
                 ),
             )
 

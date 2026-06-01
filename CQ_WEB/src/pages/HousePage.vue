@@ -339,6 +339,11 @@ function displayArea(house) {
   return `${area}㎡`
 }
 
+function displayBuildingYear(house) {
+  const year = String(house.buildingYear || '').trim()
+  return year || '-'
+}
+
 function displayCommunityLine(house) {
   return [house.communityName, house.districtName, house.subAreaName].filter(Boolean).join(' / ') || '-'
 }
@@ -752,6 +757,7 @@ onMounted(async () => {
             <tr>
               <th>封面</th>
               <th>标题</th>
+              <th>年份</th>
               <th>小区</th>
               <th>面积</th>
               <th>总价</th>
@@ -779,6 +785,7 @@ onMounted(async () => {
                 <strong class="house-title">{{ house.title || '-' }}</strong>
                 <p class="house-desc">{{ house.listingDesc || '-' }}</p>
               </td>
+              <td>{{ displayBuildingYear(house) }}</td>
               <td>{{ displayCommunityLine(house) }}</td>
               <td>{{ displayArea(house) }}</td>
               <td>{{ displayPrice(house) }}</td>
@@ -812,7 +819,7 @@ onMounted(async () => {
               </td>
             </tr>
             <tr v-if="!loading && houses.length === 0">
-              <td colspan="8" class="empty-cell">暂无房屋数据</td>
+              <td colspan="9" class="empty-cell">暂无房屋数据</td>
             </tr>
           </tbody>
         </table>

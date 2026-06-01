@@ -26,6 +26,7 @@ module.exports = {
     user: firstDefined(process.env.DB_USER, process.env.MYSQL_USER, 'root'),
     password: firstDefined(process.env.DB_PASSWORD, process.env.MYSQL_PASSWORD, ''),
     database: firstDefined(process.env.DB_NAME, process.env.MYSQL_DATABASE, 'cq_house'),
+    timezone: '+08:00',
     waitForConnections: true,
     connectionLimit: Number(firstDefined(process.env.DB_CONNECTION_LIMIT, process.env.MYSQL_CONNECTION_LIMIT, 10)),
     queueLimit: 0,

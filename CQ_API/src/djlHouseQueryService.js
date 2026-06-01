@@ -30,7 +30,20 @@ function toBoolean(value, fallback = false) {
 }
 
 function buildOrderByClause(filters = {}) {
-  return 'ORDER BY h.created_at DESC, h.id DESC';
+  return `
+    ORDER BY
+      CASE
+        WHEN TRIM(COALESCE(h.building_year, '')) REGEXP '^[0-9]{4}' THEN 1
+        ELSE 0
+      END DESC,
+      CASE
+        WHEN TRIM(COALESCE(h.building_year, '')) REGEXP '^[0-9]{4}'
+          THEN CAST(LEFT(TRIM(h.building_year), 4) AS UNSIGNED)
+        ELSE 0
+      END DESC,
+      h.created_at DESC,
+      h.id DESC
+  `;
 }
 
 async function appendApprovalStates(pool, rows = []) {
@@ -148,7 +161,7 @@ function buildWhereClause(filters = {}) {
   }
 
   if (filters.todayOnly) {
-    conditions.push('DATE(h.created_at) = CURRENT_DATE()');
+    conditions.push("DATE(CONVERT_TZ(h.created_at, '+00:00', '+08:00')) = DATE(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '+08:00'))");
   }
 
   return {
@@ -247,6 +260,7 @@ function normalizeHouseRow(row) {
     createdAt: toIsoString(row.created_at),
     title: row.title,
     listingDesc: row.house_type || '',
+    buildingYear: String(row.building_year || '').trim(),
     buildAreaSqm: row.build_area_sqm === null || row.build_area_sqm === undefined ? null : Number(row.build_area_sqm),
     communityId: row.community_id,
     communityName: row.community_name,
@@ -322,6 +336,7 @@ async function queryDjlHouseList(pool, options = {}) {
         h.total_price_wan,
         h.unit_price_text,
         h.house_type,
+        h.building_year,
         h.build_area_sqm,
         h.cover_image_url,
         h.manual_cover_image_url,

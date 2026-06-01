@@ -135,6 +135,20 @@ function chunkArray(items = [], chunkSize = 1) {
   return chunks;
 }
 
+function getChinaDateTimeString(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  return formatter.format(date);
+}
+
 function toInt(value) {
   const parsed = parseInt(value, 10);
   return Number.isNaN(parsed) ? 0 : parsed;
@@ -928,6 +942,7 @@ async function replaceCommunitiesAndHouses(connection, communities = []) {
         house.coverImageUrl,
         house.imageUrlsJson,
         house.communityInfoJson,
+        getChinaDateTimeString(),
       ]);
     });
   });
@@ -1007,7 +1022,8 @@ async function replaceCommunitiesAndHouses(connection, communities = []) {
           vr_url,
           cover_image_url,
           image_urls_json,
-          community_info_json
+          community_info_json,
+          created_at
         ) VALUES ?
         ON DUPLICATE KEY UPDATE
           title = VALUES(title),
@@ -1037,7 +1053,8 @@ async function replaceCommunitiesAndHouses(connection, communities = []) {
           vr_url = VALUES(vr_url),
           cover_image_url = VALUES(cover_image_url),
           image_urls_json = VALUES(image_urls_json),
-          community_info_json = VALUES(community_info_json)
+          community_info_json = VALUES(community_info_json),
+          created_at = VALUES(created_at)
       `,
       houseRows,
       HOUSE_INSERT_CHUNK_SIZE

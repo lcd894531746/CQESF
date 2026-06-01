@@ -120,8 +120,8 @@ function buildSummaryText(summary) {
   if (!summary || typeof summary !== 'object') return '-'
   const districts = getSummaryValue(summary, 'districtCount')
   const subAreas = getSummaryValue(summary, 'subAreaCount')
-  const communities = getSummaryValue(summary, 'mergedCommunityCount')
-  const houses = getSummaryValue(summary, 'insertedHouseCount')
+  const communities = getSummaryValue(summary, 'communityCount') || getSummaryValue(summary, 'mergedCommunityCount')
+  const houses = getSummaryValue(summary, 'houseCount') || getSummaryValue(summary, 'insertedHouseCount')
   return `行政区 ${districts} / 商圈 ${subAreas} / 小区 ${communities} / 房源 ${houses}`
 }
 
