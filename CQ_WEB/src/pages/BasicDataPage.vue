@@ -9,10 +9,17 @@ const message = reactive({
   type: '',
   text: '',
 })
-const form = reactive({
+
+const defaultFormState = {
   min_house_price: '0',
   max_house_price: '150',
   interest_rate: '3.15',
+  fapai_intro: '',
+  low_down_payment_intro: '',
+}
+
+const form = reactive({
+  ...defaultFormState,
 })
 
 const priceRangeText = computed(() => {
@@ -34,9 +41,11 @@ function showMessage(type, text) {
 }
 
 function fillForm(settings = {}) {
-  form.min_house_price = String(settings.min_house_price ?? 0)
-  form.max_house_price = String(settings.max_house_price ?? 150)
-  form.interest_rate = String(settings.interest_rate ?? 3.15)
+  form.min_house_price = String(settings.min_house_price ?? defaultFormState.min_house_price)
+  form.max_house_price = String(settings.max_house_price ?? defaultFormState.max_house_price)
+  form.interest_rate = String(settings.interest_rate ?? defaultFormState.interest_rate)
+  form.fapai_intro = String(settings.fapai_intro ?? defaultFormState.fapai_intro)
+  form.low_down_payment_intro = String(settings.low_down_payment_intro ?? defaultFormState.low_down_payment_intro)
 }
 
 function buildPayload() {
@@ -44,6 +53,8 @@ function buildPayload() {
     min_house_price: Number(form.min_house_price),
     max_house_price: Number(form.max_house_price),
     interest_rate: Number(form.interest_rate),
+    fapai_intro: form.fapai_intro.trim(),
+    low_down_payment_intro: form.low_down_payment_intro.trim(),
   }
 }
 
@@ -132,41 +143,70 @@ onMounted(async () => {
 
     <section class="card basic-data-card">
       <form class="basic-form" @submit.prevent="saveSettings">
-        <div class="field-group">
-          <div>
-            <h3>房屋价格范围</h3>
-            <p class="field-hint">单位：万元</p>
+        <div class="basic-form-body">
+          <div class="field-group compact-field-group">
+            <div>
+              <h3>房屋价格范围与利率</h3>
+              <p class="field-hint">房屋价格单位：万元，利率单位：%</p>
+            </div>
+            <div class="triple-fields">
+              <label>
+                <span class="required-label">最低价格</span>
+                <input v-model.trim="form.min_house_price" inputmode="decimal" placeholder="0" />
+              </label>
+              <label>
+                <span class="required-label">最高价格</span>
+                <input v-model.trim="form.max_house_price" inputmode="decimal" placeholder="150" />
+              </label>
+              <label>
+                <span class="required-label">利率</span>
+                <input v-model.trim="form.interest_rate" inputmode="decimal" placeholder="3.15" />
+              </label>
+            </div>
+            <div class="summary-pair">
+              <p class="summary-line">当前范围：{{ priceRangeText }}</p>
+              <p class="summary-line">当前利率：{{ interestRateText }}</p>
+            </div>
           </div>
-          <div class="range-fields">
-            <label>
-              <span class="required-label">最低价格</span>
-              <input v-model.trim="form.min_house_price" inputmode="decimal" placeholder="0" />
-            </label>
-            <label>
-              <span class="required-label">最高价格</span>
-              <input v-model.trim="form.max_house_price" inputmode="decimal" placeholder="150" />
-            </label>
+
+          <div class="intro-grid">
+            <div class="field-group intro-field-group">
+              <h3>法拍房简介</h3>
+              <label class="intro-field">
+                <textarea
+                  v-model.trim="form.fapai_intro"
+                  rows="4"
+                  placeholder="请输入法拍房简介"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="field-group intro-field-group">
+              <h3>低首付简介</h3>
+              <label class="intro-field">
+                <textarea
+                  v-model.trim="form.low_down_payment_intro"
+                  rows="4"
+                  placeholder="请输入低首付简介"
+                ></textarea>
+              </label>
+            </div>
           </div>
-          <p class="summary-line">当前范围：{{ priceRangeText }}</p>
         </div>
 
-        <div class="field-group">
-          <div>
-            <h3>利率</h3>
-            <p class="field-hint">单位：%</p>
-          </div>
-          <label class="single-field">
-            <span class="required-label">利率</span>
-            <input v-model.trim="form.interest_rate" inputmode="decimal" placeholder="3.15" />
-          </label>
-          <p class="summary-line">当前利率：{{ interestRateText }}</p>
-        </div>
-
-        <div class="actions">
+        <div class="actions basic-form-actions">
           <button v-permission="'admin'" class="primary" type="submit" :disabled="loading || saving">
             {{ saving ? '保存中...' : '保存' }}
           </button>
-          <button v-permission="'admin'" class="ghost" type="button" :disabled="loading || saving" @click="resetDefaults">恢复默认</button>
+          <button
+            v-permission="'admin'"
+            class="ghost"
+            type="button"
+            :disabled="loading || saving"
+            @click="resetDefaults"
+          >
+            恢复默认
+          </button>
         </div>
       </form>
     </section>

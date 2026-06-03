@@ -18,6 +18,61 @@ page {
   padding-bottom: 10rpx;
 }
 
+.notice-bar {
+  margin-bottom: 16rpx;
+  height: 64rpx;
+  border-radius: 32rpx;
+  background: #fff8ef;
+  border: 1rpx solid #f3dfb2;
+  display: flex;
+  align-items: center;
+  padding: 0 20rpx;
+  box-sizing: border-box;
+}
+
+.notice-icon {
+  flex: 0 0 auto;
+  margin-right: 16rpx;
+  color: #c27a11;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.notice-marquee {
+  flex: 1;
+  height: 40rpx;
+  overflow: hidden;
+}
+
+.notice-track {
+  display: inline-flex;
+  align-items: center;
+  height: 40rpx;
+  animation: notice-marquee-move 14s linear infinite;
+}
+
+.notice-text {
+  flex: 0 0 auto;
+  color: #7a5b2f;
+  font-size: 24rpx;
+  white-space: nowrap;
+  line-height: 40rpx;
+}
+
+.notice-text-copy {
+  padding-left: 80rpx;
+}
+
+@keyframes notice-marquee-move {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(calc(-50% - 40rpx));
+  }
+}
+
 .list-scroll {
   flex: 1;
   min-height: 0;

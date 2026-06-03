@@ -15,8 +15,11 @@ CREATE TABLE IF NOT EXISTS people (
 
 CREATE TABLE IF NOT EXISTS basic_settings (
   id TINYINT PRIMARY KEY,
-  house_price DECIMAL(12, 2) NOT NULL,
-  interest_rate DECIMAL(6, 2) NOT NULL,
+  min_house_price DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  max_house_price DECIMAL(12, 2) NOT NULL DEFAULT 150,
+  interest_rate DECIMAL(6, 2) NOT NULL DEFAULT 3.15,
+  fapai_intro TEXT NULL,
+  low_down_payment_intro TEXT NULL,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
@@ -53,7 +56,7 @@ CREATE TABLE IF NOT EXISTS wechat_customer_sales_bindings (
   INDEX idx_share_key (share_key)
 );
 
-INSERT INTO basic_settings (id, house_price, interest_rate)
-VALUES (1, 0, 0)
+INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro)
+VALUES (1, 0, 150, 3.15, '', '')
 ON DUPLICATE KEY UPDATE id = id;
 

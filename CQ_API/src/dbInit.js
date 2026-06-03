@@ -77,6 +77,8 @@ CREATE TABLE IF NOT EXISTS basic_settings (
   min_house_price DECIMAL(12, 2) NOT NULL DEFAULT 0,
   max_house_price DECIMAL(12, 2) NOT NULL DEFAULT 150,
   interest_rate DECIMAL(6, 2) NOT NULL DEFAULT 3.15,
+  fapai_intro TEXT NULL,
+  low_down_payment_intro TEXT NULL,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )
 `;
@@ -319,6 +321,14 @@ async function synchronizeBasicSettingsSchema(connection) {
 
   if (!columnNames.has('max_house_price')) {
     alters.push('ADD COLUMN `max_house_price` DECIMAL(12, 2) NOT NULL DEFAULT 150 AFTER `min_house_price`');
+  }
+
+  if (!columnNames.has('fapai_intro')) {
+    alters.push('ADD COLUMN `fapai_intro` TEXT NULL AFTER `interest_rate`');
+  }
+
+  if (!columnNames.has('low_down_payment_intro')) {
+    alters.push('ADD COLUMN `low_down_payment_intro` TEXT NULL AFTER `fapai_intro`');
   }
 
   if (columnNames.has('house_price')) {

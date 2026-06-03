@@ -7,6 +7,7 @@
     "pages/ershoudetail/index",
     "pages/houselist/index",
     "pages/housedetail/index",
+    "pages/webview/index",
     "pages/houselocation/index",
     "pages/auctionlist/index",
     "pages/maphouse/index",

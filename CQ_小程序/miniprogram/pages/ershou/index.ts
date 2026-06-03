@@ -514,6 +514,7 @@ Page({
     showOpenidCard: false,
     annualInterestRate: DEFAULT_ANNUAL_INTEREST_RATE,
     showPhoneAuthDialog: false,
+    introText: '',
   },
   onLoad(query: Record<string, string>) {
     ;(this as any)._visiblePool = [] as ErshouItem[]
@@ -700,9 +701,13 @@ Page({
       const annualInterestRate = Number(settings.interest_rate || DEFAULT_ANNUAL_INTEREST_RATE)
       this.setData({
         annualInterestRate: Number.isFinite(annualInterestRate) ? annualInterestRate : DEFAULT_ANNUAL_INTEREST_RATE,
+        introText: String(settings.low_down_payment_intro || '').trim(),
       })
     } catch (error) {
-      this.setData({ annualInterestRate: DEFAULT_ANNUAL_INTEREST_RATE })
+      this.setData({
+        annualInterestRate: DEFAULT_ANNUAL_INTEREST_RATE,
+        introText: '',
+      })
     }
   },
   refreshByFilter() {

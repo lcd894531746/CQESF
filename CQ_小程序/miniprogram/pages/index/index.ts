@@ -1,4 +1,4 @@
-import { requestBindSalesOpenid, requestHouseList, requestServiceTel } from '../../services/house'
+import { requestBasicSettings, requestBindSalesOpenid, requestHouseList, requestServiceTel } from '../../services/house'
 import { parseAreaRange, parsePriceRange, splitColumns } from '../../utils/house-filters.js'
 import { cleanYinshanImageUrl } from '../../utils/clean-image'
 import { canWechatShare, consumeShareParams, syncWechatShareMenu } from '../../utils/wechat-access'
@@ -344,6 +344,7 @@ Page({
     currentShareKey: '',
     salesName: '',
     showPhoneAuthDialog: false,
+    introText: '',
   },
 
   onLoad(_query: Record<string, string>) {
@@ -381,11 +382,23 @@ Page({
     }
 
     this.loadAuctionStats()
+    this.loadBasicSettings()
     this.refreshByFilter()
     setTimeout(() => {
       this.syncTabBarSelected()
     }, 0)
 
+  },
+
+  async loadBasicSettings() {
+    try {
+      const settings = await requestBasicSettings()
+      this.setData({
+        introText: String(settings.fapai_intro || '').trim(),
+      })
+    } catch (error) {
+      this.setData({ introText: '' })
+    }
   },
 
   onShow() {

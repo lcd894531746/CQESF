@@ -65,6 +65,7 @@ const DJL_MAP_SUB_AREAS_API = `${BK_API_BASE_URL}/api/djl/map/sub-areas`
 const DJL_MAP_COMMUNITIES_API = `${BK_API_BASE_URL}/api/djl/map/communities`
 const BASIC_SETTINGS_API = `${BK_API_BASE_URL}/api/basic-settings`
 const SPECIAL_ASSETS_API = `${BK_API_BASE_URL}/api/special-assets`
+const DISTRICT_LIST_API = 'https://api.ysfp.com.cn/api/common/area/distList'
 const MAP_DISTRICT_COUNT_API = 'https://api.ysfp.com.cn/api/map/district/getDistrictHouseCount'
 const SUBWAY_BY_CITY_API = 'https://api.ysfp.com.cn/api/subwayDate/getSubwayByCityName'
 const MAP_DATA_API = 'https://api.ysfp.com.cn/api/map/district/dataMap'
@@ -135,6 +136,22 @@ type DistrictCountResponse = {
   data?: DistrictCountRow[]
 }
 
+export type DistrictListRow = {
+  id: number
+  name: string
+  parentId?: number | null
+  level?: number | null
+  wholeName?: string | null
+  areaCode?: string | null
+  sort?: number | null
+  location?: string | null
+}
+
+type DistrictListResponse = {
+  code?: number
+  data?: DistrictListRow[]
+}
+
 type SubwayStationRow = {
   station: string
   latitude: number
@@ -183,6 +200,8 @@ export type BasicSettingsData = {
   min_house_price?: number
   max_house_price?: number
   interest_rate?: number
+  fapai_intro?: string
+  low_down_payment_intro?: string
   updated_at?: string
 }
 
@@ -1000,6 +1019,25 @@ export function requestDistrictHouseCount(cityName: string, houseTypeId: number)
       data: { cityName, houseTypeId, type: 0 },
       success: (res) => {
         const responseData = (res.data || {}) as DistrictCountResponse
+        if (responseData.code !== 200) {
+          reject(new Error('API_CODE_ERROR'))
+          return
+        }
+        resolve(responseData.data || [])
+      },
+      fail: () => reject(new Error('NETWORK_FAIL')),
+    })
+  })
+}
+
+export function requestAuctionDistrictList(cityName: string): Promise<DistrictListRow[]> {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: DISTRICT_LIST_API,
+      method: 'GET',
+      data: { cityName },
+      success: (res) => {
+        const responseData = (res.data || {}) as DistrictListResponse
         if (responseData.code !== 200) {
           reject(new Error('API_CODE_ERROR'))
           return

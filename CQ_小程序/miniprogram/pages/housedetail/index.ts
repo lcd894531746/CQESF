@@ -339,6 +339,42 @@ Page({
       success: () => wx.showToast({ title: '链接已复制', icon: 'none' }),
     })
   },
+  onOpenExternalLinkTap() {
+    const url = String(this.data.house.externalLink || '').trim()
+    if (!url) {
+      wx.showToast({ title: '鏆傛棤閾炬帴', icon: 'none' })
+      return
+    }
+    if (/^https:\/\//i.test(url)) {
+      wx.navigateTo({
+        url: `/pages/webview/index?url=${encodeURIComponent(url)}&title=${encodeURIComponent('来源地址')}`,
+      })
+      return
+    }
+    wx.setClipboardData({
+      data: url,
+      success: () => {
+        wx.showModal({
+          title: '鏃犳硶鐩存帴鎵撳紑',
+          content: '褰撳墠鏉ユ簮鍦板潃宸插鍒板壀璐村澘锛岃鍦ㄦ祻瑙堝櫒涓墦寮€銆?',
+          showCancel: false,
+        })
+      },
+    })
+  },
+  onOpenExternalSourceTap() {
+    const rawUrl = String(this.data.house.externalLink || '').trim()
+    if (!rawUrl) {
+      wx.showToast({ title: '\u6682\u65e0\u94fe\u63a5', icon: 'none' })
+      return
+    }
+    wx.setClipboardData({
+      data: rawUrl,
+      success: () => {
+        wx.showToast({ title: '\u5df2\u590d\u5236', icon: 'none' })
+      },
+    })
+  },
   onShareAppMessage() {
     if (!canWechatShare(readWechatLoginCache())) {
       return {

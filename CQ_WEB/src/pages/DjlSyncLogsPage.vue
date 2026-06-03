@@ -75,6 +75,7 @@ function formatStatusClass(status) {
 
 function formatTaskType(taskType) {
   if (taskType === 'full_sync') return '全量采集入库'
+  if (taskType === 'fapai_sync') return '法拍房源采集'
   return taskType || '-'
 }
 
@@ -90,12 +91,8 @@ function formatDuration(startedAt, finishedAt) {
   const minutes = Math.floor((totalSeconds % 3600) / 60)
   const seconds = totalSeconds % 60
 
-  if (hours > 0) {
-    return `${hours}小时 ${minutes}分 ${seconds}秒`
-  }
-  if (minutes > 0) {
-    return `${minutes}分 ${seconds}秒`
-  }
+  if (hours > 0) return `${hours}小时 ${minutes}分 ${seconds}秒`
+  if (minutes > 0) return `${minutes}分 ${seconds}秒`
   return `${seconds}秒`
 }
 
@@ -104,9 +101,7 @@ function buildParams(page = 1) {
     page,
     pageSize: pagination.pageSize,
   }
-  if (filters.status) {
-    params.status = filters.status
-  }
+  if (filters.status) params.status = filters.status
   return params
 }
 
@@ -116,8 +111,18 @@ function getSummaryValue(summary, key) {
   return Number.isFinite(value) ? value : 0
 }
 
-function buildSummaryText(summary) {
+function buildSummaryText(task) {
+  const summary = task?.summary
   if (!summary || typeof summary !== 'object') return '-'
+
+  if (task?.taskType === 'fapai_sync' || summary.task_type === 'fapai_sync') {
+    const houseCount = getSummaryValue(summary, 'written_rows')
+      || getSummaryValue(summary, 'normalized_rows')
+      || getSummaryValue(summary, 'fetched_rows')
+      || getSummaryValue(summary, 'total')
+    return `房源 ${houseCount} 条`
+  }
+
   const districts = getSummaryValue(summary, 'districtCount')
   const subAreas = getSummaryValue(summary, 'subAreaCount')
   const communities = getSummaryValue(summary, 'communityCount') || getSummaryValue(summary, 'mergedCommunityCount')
@@ -161,10 +166,7 @@ async function resetFilters() {
 }
 
 async function changePage(nextPage) {
-  if (nextPage < 1 || (pagination.totalPages && nextPage > pagination.totalPages)) {
-    return
-  }
-
+  if (nextPage < 1 || (pagination.totalPages && nextPage > pagination.totalPages)) return
   try {
     await loadLogs(nextPage)
   } catch (error) {
@@ -255,7 +257,7 @@ onMounted(async () => {
               <td>{{ formatDateTime(item.startedAt) }}</td>
               <td>{{ formatDateTime(item.finishedAt) }}</td>
               <td>{{ formatDuration(item.startedAt, item.finishedAt) }}</td>
-              <td class="sync-summary-cell">{{ buildSummaryText(item.summary) }}</td>
+              <td class="sync-summary-cell">{{ buildSummaryText(item) }}</td>
               <td class="error-cell sync-error-cell">{{ item.errorMessage || '-' }}</td>
             </tr>
             <tr v-if="!loading && logs.length === 0">
@@ -315,31 +317,31 @@ onMounted(async () => {
 }
 
 .sync-log-table .col-task-type {
-  width: 100px;
+  width: 140px;
 }
 
 .sync-log-table .col-status {
-  width: 60px;
+  width: 90px;
 }
 
 .sync-log-table .col-trigger-by {
-  width: 60px;
+  width: 110px;
 }
 
 .sync-log-table .col-started-at {
-  width: 120px;
+  width: 170px;
 }
 
 .sync-log-table .col-finished-at {
-  width: 120px;
+  width: 170px;
 }
 
 .sync-log-table .col-duration {
-  width: 100px;
+  width: 110px;
 }
 
 .sync-log-table .col-summary {
-  width: 360px;
+  width: 280px;
 }
 
 .sync-log-table .col-error {

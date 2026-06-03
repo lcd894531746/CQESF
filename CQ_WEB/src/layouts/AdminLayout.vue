@@ -88,6 +88,7 @@ async function updateCurrentPassword() {
         <RouterLink v-permission="'reviewer'" class="nav-item" active-class="active" to="/approval-tasks">审核管理</RouterLink>
         <RouterLink v-permission="'admin'" class="nav-item" active-class="active" to="/basic-data">基础数据维护</RouterLink>
         <RouterLink v-permission="'admin'" class="nav-item" active-class="active" to="/djl-sync-logs">数据采集日志</RouterLink>
+        <RouterLink v-permission="'uploader'" class="nav-item" active-class="active" to="/fapai-houses">法拍房源</RouterLink>
         <RouterLink class="nav-item" active-class="active" to="/houses">房屋管理</RouterLink>
         <RouterLink class="nav-item" active-class="active" to="/special-assets">特殊资产</RouterLink>
       </nav>

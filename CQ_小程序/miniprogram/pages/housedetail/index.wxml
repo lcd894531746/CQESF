@@ -56,6 +56,11 @@
             <text class="info-value">{{item.value}}</text>
           </view>
         </view>
+        <view class="link-row" wx:if="{{house.externalLink}}">
+          <text class="link-label">来源地址</text>
+          <text class="link-value">{{house.externalLink}}</text>
+          <text class="link-action" bindtap="onOpenExternalSourceTap">复制</text>
+        </view>
       </view>
     </view>
     <view class="content-bottom-space"></view>

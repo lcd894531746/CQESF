@@ -7,6 +7,7 @@ import SpecialAssetsPage from '../pages/SpecialAssetsPage.vue'
 import BasicDataPage from '../pages/BasicDataPage.vue'
 import ApprovalTasksPage from '../pages/ApprovalTasksPage.vue'
 import DjlSyncLogsPage from '../pages/DjlSyncLogsPage.vue'
+import FapaiHousePage from '../pages/FapaiHousePage.vue'
 import { AUTH_KEY, getAuthRole, getAuthToken, getDefaultRouteByRole, hasRoleAtMostLevel } from '../constants/auth'
 
 const router = createRouter({
@@ -51,6 +52,12 @@ const router = createRouter({
           name: 'djl-sync-logs',
           component: DjlSyncLogsPage,
           meta: { minLevel: 1 },
+        },
+        {
+          path: 'fapai-houses',
+          name: 'fapai-houses',
+          component: FapaiHousePage,
+          meta: { minLevel: 3 },
         },
         {
           path: 'approval-tasks',

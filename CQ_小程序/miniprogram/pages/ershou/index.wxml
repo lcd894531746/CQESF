@@ -8,7 +8,16 @@
       <text class="openid-card-value">{{wechatLoginResult.phoneNumber}}</text>
       <text class="openid-card-sub" wx:if="{{wechatLoginStatusText}}">{{wechatLoginStatusText}}</text>
     </view>
-
+    <view class="notice-bar" wx:if="{{introText}}">
+      <view class="notice-icon">简介</view>
+      <view class="notice-marquee">
+        <view class="notice-track">
+          <text class="notice-text">{{introText}}</text>
+          <text class="notice-text notice-text-copy">{{introText}}</text>
+        </view>
+      </view>
+    </view>
+    
     <view class="search-row">
       <view class="search-box">
         <view class="search-left">
@@ -211,4 +220,3 @@
     </view>
   </view>
 </view>
-

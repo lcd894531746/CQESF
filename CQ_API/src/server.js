@@ -23,6 +23,7 @@ const {
 const { queryMapBubbles, queryMapHouseList, queryMapHouses, queryMapHouseCard } = require('./mapQueryService');
 const { queryDetailByListingId } = require('./ershouDetailQueryService');
 const { queryDjlHouseList, queryDjlDistrictOptions } = require('./djlHouseQueryService');
+const { queryFapaiHouseList, queryFapaiDistrictOptions, exportFapaiHouseWorkbook } = require('./fapaiHouseQueryService');
 const { queryDjlMapDistricts, queryDjlMapSubAreas, queryDjlMapCommunities } = require('./djlMapQueryService');
 const { listDjlSyncTasks, getLatestRunningDjlSyncTask } = require('./djlSyncQueryService');
 const { enqueueDjlFullSync, startDjlFullSync } = require('./djlSyncService');
@@ -2562,12 +2563,21 @@ async function createApp() {
 
   app.get('/api/basic-settings', allowAdminOrShareAccess, asyncHandler(async (_, res) => {
     const [rows] = await pool.query(
-      'SELECT id, min_house_price, max_house_price, interest_rate, updated_at FROM basic_settings WHERE id = 1'
+      `SELECT id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, updated_at
+         FROM basic_settings
+        WHERE id = 1`
     );
 
     res.json({
       success: true,
-      data: rows[0] || { id: 1, min_house_price: 0, max_house_price: 150, interest_rate: 3.15 },
+      data: rows[0] || {
+        id: 1,
+        min_house_price: 0,
+        max_house_price: 150,
+        interest_rate: 3.15,
+        fapai_intro: '',
+        low_down_payment_intro: '',
+      },
     });
   }));
 
@@ -2575,6 +2585,8 @@ async function createApp() {
     const minHousePrice = normalizeNumber(req.body.min_house_price);
     const maxHousePrice = normalizeNumber(req.body.max_house_price);
     const interestRate = normalizeNumber(req.body.interest_rate);
+    const fapaiIntro = String(req.body?.fapai_intro || '').trim();
+    const lowDownPaymentIntro = String(req.body?.low_down_payment_intro || '').trim();
 
     if (minHousePrice === null || maxHousePrice === null || interestRate === null) {
       return res.status(400).json({ success: false, message: '房屋价格范围和利率必须是数字' });
@@ -2589,13 +2601,15 @@ async function createApp() {
     }
 
     await pool.query(
-      `INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate)
-       VALUES (1, ?, ?, ?)
+      `INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro)
+       VALUES (1, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          min_house_price = VALUES(min_house_price),
          max_house_price = VALUES(max_house_price),
-         interest_rate = VALUES(interest_rate)`,
-      [minHousePrice, maxHousePrice, interestRate]
+         interest_rate = VALUES(interest_rate),
+         fapai_intro = VALUES(fapai_intro),
+         low_down_payment_intro = VALUES(low_down_payment_intro)`,
+      [minHousePrice, maxHousePrice, interestRate, fapaiIntro, lowDownPaymentIntro]
     );
 
     const [rows] = await pool.query('SELECT * FROM basic_settings WHERE id = 1');
@@ -2721,6 +2735,38 @@ async function createApp() {
     });
     const runningTask = await getLatestRunningDjlSyncTask(pool);
     res.json({ ok: true, result, runningTask });
+  }));
+
+  app.get('/api/fapai-houses/district-options', requireRoleLevel(3), asyncHandler(async (req, res) => {
+    const items = await queryFapaiDistrictOptions(pool);
+    res.json({
+      ok: true,
+      result: {
+        items,
+        itemCount: items.length,
+      },
+    });
+  }));
+
+  app.get('/api/fapai-houses', requireRoleLevel(3), asyncHandler(async (req, res) => {
+    const result = await queryFapaiHouseList(pool, {
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+      includeTotal: req.query.includeTotal,
+      title: req.query.title,
+      districtId: req.query.districtId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+    });
+    res.json({ ok: true, result });
+  }));
+
+  app.get('/api/fapai-houses/export', requireRoleLevel(3), asyncHandler(async (req, res) => {
+    const result = await exportFapaiHouseWorkbook(pool);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(result.fileName)}`);
+    res.setHeader('Content-Length', String(result.buffer.length));
+    res.end(Buffer.from(result.buffer));
   }));
 
   app.post('/api/djl/sync/run', requireRoleLevel(1), asyncHandler(async (req, res) => {

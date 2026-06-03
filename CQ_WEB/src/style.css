@@ -288,13 +288,27 @@ button:disabled {
 }
 
 .basic-data-card {
-  width: min(760px, 100%);
+  width: 100%;
+  max-width: none;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 24px;
+  overflow: hidden;
 }
 
 .basic-form {
-  display: grid;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   gap: 22px;
+}
+
+.basic-form-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .field-group {
@@ -302,6 +316,10 @@ button:disabled {
   gap: 12px;
   padding-bottom: 20px;
   border-bottom: 1px solid #eee4d4;
+}
+
+.compact-field-group {
+  gap: 16px;
 }
 
 .field-group h3 {
@@ -324,6 +342,18 @@ button:disabled {
   gap: 14px;
 }
 
+.triple-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.summary-pair {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
 .range-fields label,
 .single-field {
   margin-bottom: 0;
@@ -339,12 +369,36 @@ button:disabled {
   max-width: 360px;
 }
 
+.intro-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.intro-field-group {
+  height: 100%;
+}
+
+.intro-field {
+  margin-bottom: 0;
+}
+
+.intro-field textarea {
+  min-height: 160px;
+}
+
 .people-page,
 .house-page {
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+.basic-data-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .people-page .people-header,
@@ -471,6 +525,13 @@ textarea:focus {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.basic-form-actions {
+  flex: 0 0 auto;
+  padding-top: 8px;
+  border-top: 1px solid #eee4d4;
+  background: rgba(255, 251, 245, 0.96);
 }
 
 .inline-actions {
@@ -1275,6 +1336,14 @@ th {
   }
 
   .range-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .triple-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .intro-grid {
     grid-template-columns: 1fr;
   }
 
