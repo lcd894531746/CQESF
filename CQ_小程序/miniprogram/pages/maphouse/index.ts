@@ -3,6 +3,10 @@ import {
   requestDjlMapCommunities,
   requestDjlMapDistricts,
   requestDjlMapSubAreas,
+  requestFapaiMapCommunities,
+  requestFapaiMapDistricts,
+  requestFapaiMapHouses,
+  requestFapaiMapSubAreas,
   requestDistrictHouseCount,
   requestMapData,
   requestSubwayByCityName,
@@ -21,9 +25,21 @@ type BkMapHouseRow = import('../../services/house').BkMapHouseRow
 type DjlMapDistrictRow = import('../../services/house').DjlMapDistrictRow
 type DjlMapSubAreaRow = import('../../services/house').DjlMapSubAreaRow
 type DjlMapCommunityRow = import('../../services/house').DjlMapCommunityRow
+type FapaiMapDistrictRow = import('../../services/house').FapaiMapDistrictRow
+type FapaiMapSubAreaRow = import('../../services/house').FapaiMapSubAreaRow
+type FapaiMapCommunityRow = import('../../services/house').FapaiMapCommunityRow
+type FapaiMapHouseRow = import('../../services/house').FapaiMapHouseRow
 
 type MapMode = 'auction' | 'ershou'
-type MarkerType = 'district' | 'community' | 'ershouDistrict' | 'ershouSubArea' | 'ershouCommunity'
+type MarkerType =
+  | 'district'
+  | 'community'
+  | 'auctionDistrict'
+  | 'auctionSubArea'
+  | 'auctionCommunity'
+  | 'ershouDistrict'
+  | 'ershouSubArea'
+  | 'ershouCommunity'
 
 type MapPoint = {
   name: string
@@ -52,6 +68,7 @@ type InfoItem = {
 type ErshouDetailCache = {
   id: string
   houseCode: string
+  sourceId?: string
   title: string
   position: string
   images: string[]
@@ -298,6 +315,52 @@ function normalizeDjlCommunityPoint(row: DjlMapCommunityRow): MapPoint | null {
   }
 }
 
+function normalizeFapaiDistrictPoint(row: FapaiMapDistrictRow): MapPoint | null {
+  const longitude = Number(row.longitude)
+  const latitude = Number(row.latitude)
+  const areaCode = normalizeText(row.areaCode)
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || !areaCode) return null
+  return {
+    name: normalizeText(row.displayName) || normalizeText(row.areaName) || '区域',
+    entityId: areaCode,
+    bubbleId: areaCode,
+    longitude,
+    latitude,
+    priceStr: normalizeText(row.priceText),
+  }
+}
+
+function normalizeFapaiSubAreaPoint(row: FapaiMapSubAreaRow): MapPoint | null {
+  const longitude = Number(row.longitude)
+  const latitude = Number(row.latitude)
+  const areaCode = normalizeText(row.areaCode)
+  const subAreaName = normalizeText(row.subAreaName)
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || !areaCode || !subAreaName) return null
+  return {
+    name: subAreaName,
+    entityId: areaCode,
+    bubbleId: subAreaName,
+    longitude,
+    latitude,
+    priceStr: normalizeText(row.priceText),
+  }
+}
+
+function normalizeFapaiCommunityPoint(row: FapaiMapCommunityRow): MapPoint | null {
+  const longitude = Number(row.longitude)
+  const latitude = Number(row.latitude)
+  const communityId = normalizeText(row.communityId)
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || !communityId) return null
+  return {
+    name: normalizeText(row.communityName) || '小区',
+    entityId: communityId,
+    bubbleId: communityId,
+    longitude,
+    latitude,
+    priceStr: normalizeText(row.priceText),
+  }
+}
+
 function toMapBoundsPoints(points: MapPoint[]): Array<{ longitude: number; latitude: number }> {
   return points
     .map((item) => ({
@@ -384,6 +447,64 @@ function buildDrawerItem(row: BkMapHouseRow, index: number): DrawerItem {
   }
 }
 
+function buildAuctionDrawerItem(row: FapaiMapHouseRow, index: number): DrawerItem {
+  const areaValue = Number(row.area || 0)
+  const startingPriceValue = Number(row.startingPrice || 0)
+  const marketPriceValue = Number(row.marketPrice || 0)
+  const position = normalizeText(row.detailAddress) || normalizeText(row.communityName) || normalizeText(row.title) || '暂无小区'
+  const title = normalizeText(row.title) || normalizeText(row.communityName) || '法拍房源'
+  const sourceId = row.sourceId ? String(row.sourceId) : ''
+  const itemId = sourceId || (row.id ? String(row.id) : String(index + 1))
+  const image = firstImageFromValue((row as FapaiMapHouseRow & { coverPic?: string | null }).coverPic)
+  const statusText = normalizeText(row.auctionStatusText)
+  const infoList: InfoItem[] = []
+  if (normalizeText(row.communityName)) infoList.push({ label: '小区', value: normalizeText(row.communityName) })
+  if (normalizeText(row.layout)) infoList.push({ label: '户型', value: normalizeText(row.layout) })
+  if (areaValue > 0) infoList.push({ label: '面积', value: `${areaValue}㎡` })
+  if (normalizeText(row.orientation)) infoList.push({ label: '朝向', value: normalizeText(row.orientation) })
+  if (statusText) infoList.push({ label: '状态', value: statusText })
+  if (normalizeText(row.auctionTime)) infoList.push({ label: '开拍', value: normalizeText(row.auctionTime) })
+  const detailPayload: ErshouDetailCache = {
+    id: itemId,
+    houseCode: sourceId,
+    sourceId,
+    title,
+    position,
+    images: image ? [image] : [],
+    hasImages: Boolean(image),
+    totalPriceText: startingPriceValue > 0 ? `${startingPriceValue}万` : '-',
+    unitPriceText: marketPriceValue > 0 ? `市场价 ${marketPriceValue}万` : '',
+    downPaymentText: '-',
+    monthlyPaymentText: statusText || '-',
+    layoutText: normalizeText(row.layout),
+    areaText: areaValue > 0 ? `${areaValue}㎡` : '-',
+    orientationText: normalizeText(row.orientation),
+    infoList,
+    contactName: '资产顾问',
+    contactPhone: '4008001234',
+    longitude: parseCoordinate(row.longitude),
+    latitude: parseCoordinate(row.latitude),
+  }
+
+  return {
+    id: itemId,
+    houseCode: sourceId,
+    title,
+    position,
+    image,
+    hasImage: Boolean(image),
+    totalPriceText: detailPayload.totalPriceText,
+    unitPriceText: detailPayload.unitPriceText || '法拍房源',
+    downPaymentText: normalizeText(row.auctionTime) || '开拍时间待定',
+    monthlyPaymentText: statusText || '状态待定',
+    layoutText: detailPayload.layoutText,
+    areaText: areaValue > 0 ? `${areaValue}㎡` : '',
+    orientationText: detailPayload.orientationText,
+    actionUrl: row.id ? `/pages/housedetail/index?id=${row.id}` : '',
+    detailPayload,
+  }
+}
+
 function markProgrammaticRegionChange(page: WechatMiniprogram.Page.Instance<any, any>, count = 2) {
   const current = Number((page as any)._ignoreRegionChangeCount || 0)
   ;(page as any)._ignoreRegionChangeCount = Math.max(current, count)
@@ -461,7 +582,7 @@ Page({
       ;(this as any).loadErshouDistricts()
       return
     }
-    ;(this as any).loadDistrictMapData()
+    ;(this as any).loadAuctionDistricts()
   },
 
   async loadErshouDistricts() {
@@ -559,6 +680,51 @@ Page({
       console.error('loadDistrictMapData failed', error)
       this.setData({ loading: false })
       wx.showToast({ title: '地图数据加载失败', icon: 'none' })
+    }
+  },
+
+  async loadAuctionDistricts() {
+    if (!hasWechatAccess()) {
+      showNoAccessToast()
+      return
+    }
+    ;(this as any)._auctionLoadingLevel = 'district'
+    this.setData({ loading: true, loadingText: '区域加载中...', drawerVisible: false })
+    try {
+      const rows = await requestFapaiMapDistricts()
+      const points = rows.map(normalizeFapaiDistrictPoint).filter((item): item is MapPoint => Boolean(item))
+      const markerMeta = new Map<number, MarkerMeta>()
+      points.forEach((point, index) => markerMeta.set(500000 + index, {
+        type: 'auctionDistrict',
+        name: point.name,
+        entityId: point.entityId,
+        bubbleId: point.bubbleId,
+        longitude: point.longitude,
+        latitude: point.latitude,
+      }))
+      ;(this as any)._markerMeta = markerMeta
+      ;(this as any)._auctionDistrictParent = undefined
+      ;(this as any)._auctionSubAreaParent = undefined
+      const boundsPoints = toMapBoundsPoints(points)
+      this.setData({
+        markers: createMarkers(points, 500000, '#2563eb'),
+        polylines: [],
+        includePoints: boundsPoints,
+        longitude: CHONGQING_CENTER.longitude,
+        latitude: CHONGQING_CENTER.latitude,
+        scale: 7,
+        zoomLevel: 'district',
+        pageDesc: '重庆 · 法拍区域分布',
+        mapTipText: '点击行政区查看商圈',
+        loading: false,
+      })
+      ;(this as any).fitMapToPoints(boundsPoints)
+    } catch (error) {
+      console.error('loadAuctionDistricts failed', error)
+      this.setData({ loading: false })
+      wx.showToast({ title: '区域加载失败', icon: 'none' })
+    } finally {
+      ;(this as any)._auctionLoadingLevel = ''
     }
   },
 
@@ -745,6 +911,136 @@ Page({
     }
   },
 
+  async loadAuctionSubAreas(parent: MarkerMeta) {
+    if (!hasWechatAccess()) {
+      showNoAccessToast()
+      return
+    }
+    const areaCode = normalizeText(parent.entityId)
+    if (!areaCode) return
+    ;(this as any)._auctionLoadingLevel = 'bizcircle'
+    this.setData({ loading: true, loadingText: '商圈加载中...', drawerVisible: false })
+    try {
+      const rows = await requestFapaiMapSubAreas({ areaCode })
+      const points = rows.map(normalizeFapaiSubAreaPoint).filter((item): item is MapPoint => Boolean(item))
+      const markerMeta = new Map<number, MarkerMeta>()
+      points.forEach((point, index) => markerMeta.set(600000 + index, {
+        type: 'auctionSubArea',
+        name: point.name,
+        entityId: point.entityId,
+        bubbleId: point.bubbleId,
+        longitude: point.longitude,
+        latitude: point.latitude,
+      }))
+      const boundsPoints = toMapBoundsPoints(points)
+      ;(this as any)._markerMeta = markerMeta
+      ;(this as any)._auctionDistrictParent = parent
+      ;(this as any)._auctionSubAreaParent = undefined
+      this.setData({
+        markers: createMarkers(points, 600000, '#2563eb'),
+        polylines: [],
+        includePoints: boundsPoints,
+        longitude: Number.isFinite(Number(parent.longitude)) ? Number(parent.longitude) : points[0]?.longitude || this.data.longitude,
+        latitude: Number.isFinite(Number(parent.latitude)) ? Number(parent.latitude) : points[0]?.latitude || this.data.latitude,
+        scale: 12,
+        zoomLevel: 'bizcircle',
+        pageDesc: parent.name + ' · 商圈分布',
+        mapTipText: '点击商圈查看小区',
+        loading: false,
+      })
+      markProgrammaticRegionChange(this, 4)
+    } catch (error) {
+      console.error('loadAuctionSubAreas failed', { parent, error })
+      this.setData({ loading: false })
+      wx.showToast({ title: '商圈加载失败', icon: 'none' })
+    } finally {
+      ;(this as any)._auctionLoadingLevel = ''
+    }
+  },
+
+  async loadAuctionCommunities(parent: MarkerMeta) {
+    if (!hasWechatAccess()) {
+      showNoAccessToast()
+      return
+    }
+    const areaCode = normalizeText(parent.entityId)
+    const subAreaName = normalizeText(parent.bubbleId || parent.name)
+    if (!areaCode || !subAreaName) return
+    ;(this as any)._auctionLoadingLevel = 'community'
+    this.setData({ loading: true, loadingText: '小区加载中...', drawerVisible: false })
+    try {
+      const rows = await requestFapaiMapCommunities({ areaCode, subAreaName })
+      const points = rows.map(normalizeFapaiCommunityPoint).filter((item): item is MapPoint => Boolean(item))
+      const markerMeta = new Map<number, MarkerMeta>()
+      points.forEach((point, index) => markerMeta.set(700000 + index, {
+        type: 'auctionCommunity',
+        name: point.name,
+        entityId: point.entityId,
+        bubbleId: point.bubbleId,
+        longitude: point.longitude,
+        latitude: point.latitude,
+      }))
+      const boundsPoints = toMapBoundsPoints(points)
+      ;(this as any)._markerMeta = markerMeta
+      ;(this as any)._auctionSubAreaParent = parent
+      this.setData({
+        markers: createMarkers(points, 700000, '#e34b40'),
+        polylines: [],
+        includePoints: boundsPoints,
+        longitude: Number.isFinite(Number(parent.longitude)) ? Number(parent.longitude) : points[0]?.longitude || this.data.longitude,
+        latitude: Number.isFinite(Number(parent.latitude)) ? Number(parent.latitude) : points[0]?.latitude || this.data.latitude,
+        scale: 14,
+        zoomLevel: 'community',
+        pageDesc: parent.name + ' · 小区分布',
+        mapTipText: '点击小区查看法拍房源',
+        loading: false,
+      })
+      markProgrammaticRegionChange(this, 4)
+    } catch (error) {
+      console.error('loadAuctionCommunities failed', { parent, error })
+      this.setData({ loading: false })
+      wx.showToast({ title: '小区加载失败', icon: 'none' })
+    } finally {
+      ;(this as any)._auctionLoadingLevel = ''
+    }
+  },
+
+  async loadAuctionCommunityHouses(meta: MarkerMeta) {
+    if (!hasWechatAccess()) {
+      showNoAccessToast()
+      return
+    }
+    const communityId = normalizeText(meta.entityId || meta.bubbleId)
+    if (!communityId) return
+    this.setData({ loading: true, loadingText: '房源加载中...', drawerVisible: false })
+    try {
+      const response = await requestFapaiMapHouses({ communityId })
+      const listings = response.items.map(buildAuctionDrawerItem)
+      if (listings.length === 0) {
+        this.setData({
+          loading: false,
+          drawerVisible: false,
+          activeCommunityName: meta.name,
+          activeCommunityListings: [],
+          mapTipText: meta.name + ' 暂无法拍房源',
+        })
+        wx.showToast({ title: meta.name + ' 暂无法拍房源', icon: 'none' })
+        return
+      }
+      this.setData({
+        loading: false,
+        drawerVisible: true,
+        activeCommunityName: response.communityName || meta.name,
+        activeCommunityListings: listings,
+        mapTipText: '当前展示 ' + (response.communityName || meta.name) + ' 的法拍房源',
+      })
+    } catch (error) {
+      console.error('loadAuctionCommunityHouses failed', { meta, error })
+      this.setData({ loading: false })
+      wx.showToast({ title: '房源加载失败', icon: 'none' })
+    }
+  },
+
   getMapScale(): Promise<number> {
     return new Promise((resolve) => {
       const mapCtx = (this as any)._mapCtx as WechatMiniprogram.MapContext
@@ -825,13 +1121,18 @@ Page({
       return
     }
 
-    if (scale >= 14 && this.data.zoomLevel !== 'community') {
-      const region = await (this as any).getMapRegion()
-      if (region) await (this as any).loadCommunityDataByRegion(region)
+    if ((this as any)._auctionLoadingLevel) return
+    if (scale <= ERSHOU_DISTRICT_MAX_SCALE && this.data.zoomLevel !== 'district') {
+      await (this as any).loadAuctionDistricts()
       return
     }
-    if (scale < 14 && this.data.zoomLevel !== 'district') {
-      await (this as any).loadDistrictMapData()
+    if (scale <= ERSHOU_BIZCIRCLE_MAX_SCALE && scale > ERSHOU_DISTRICT_MAX_SCALE && this.data.zoomLevel === 'community') {
+      const parent = (this as any)._auctionDistrictParent as MarkerMeta | undefined
+      if (parent && parent.entityId) {
+        await (this as any).loadAuctionSubAreas(parent)
+        return
+      }
+      await (this as any).loadAuctionDistricts()
     }
   },
 
@@ -862,11 +1163,19 @@ Page({
       return
     }
 
-    const encodedName = encodeURIComponent(meta.name)
-    const query = meta.type === 'district' ? 'districtName=' + encodedName : 'keyword=' + encodedName
-    wx.navigateTo({
-      url: '/pages/houselist/index?fromMap=1&houseTypeId=' + Number(this.data.activeHouseTypeId || DEFAULT_HOUSE_TYPE_ID) + '&' + query,
-    })
+    if (meta.type === 'auctionDistrict') {
+      suppressAutoLevelFallback(this)
+      await (this as any).loadAuctionSubAreas(meta)
+      return
+    }
+    if (meta.type === 'auctionSubArea') {
+      suppressAutoLevelFallback(this)
+      await (this as any).loadAuctionCommunities(meta)
+      return
+    }
+    if (meta.type === 'auctionCommunity') {
+      await (this as any).loadAuctionCommunityHouses(meta)
+    }
   },
 
   onHouseTypeTabTap(e: WechatMiniprogram.CustomEvent<{ typeid: number }>) {
@@ -874,7 +1183,7 @@ Page({
     const typeId = Number(e.currentTarget.dataset.typeid || 0)
     if (!typeId || typeId === this.data.activeHouseTypeId) return
     this.setData({ activeHouseTypeId: typeId, zoomLevel: 'district' })
-    ;(this as any).loadDistrictMapData()
+    ;(this as any).loadAuctionDistricts()
   },
 
   onCalloutTap(e: WechatMiniprogram.CustomEvent<{ markerId: number }>) {
@@ -907,6 +1216,19 @@ Page({
     }
     wx.navigateTo({
       url: '/pages/ershoudetail/index?listingId=' + encodeURIComponent(id) + '&houseCode=' + encodeURIComponent(houseCode),
+    })
+  },
+
+  onAuctionHouseTap(e: WechatMiniprogram.CustomEvent<{ id: string; housecode?: string }>) {
+    if (!hasWechatAccess()) {
+      showNoAccessToast()
+      return
+    }
+    const id = Number(e.currentTarget.dataset.id || 0)
+    const sourceId = String((e.currentTarget.dataset as { housecode?: string }).housecode || '').trim()
+    if (!id) return
+    wx.navigateTo({
+      url: `/pages/housedetail/index?id=${id}${sourceId ? `&sourceId=${encodeURIComponent(sourceId)}` : ''}`,
     })
   },
 

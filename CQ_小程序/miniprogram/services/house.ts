@@ -63,6 +63,11 @@ const BK_MAP_HOUSE_CARD_API = `${BK_API_BASE_URL}/api/bk/map/house-card`
 const DJL_MAP_DISTRICTS_API = `${BK_API_BASE_URL}/api/djl/map/districts`
 const DJL_MAP_SUB_AREAS_API = `${BK_API_BASE_URL}/api/djl/map/sub-areas`
 const DJL_MAP_COMMUNITIES_API = `${BK_API_BASE_URL}/api/djl/map/communities`
+const FAPAI_MAP_DISTRICTS_API = `${BK_API_BASE_URL}/api/fapai/map/districts`
+const FAPAI_MAP_SUB_AREAS_API = `${BK_API_BASE_URL}/api/fapai/map/sub-areas`
+const FAPAI_MAP_COMMUNITIES_API = `${BK_API_BASE_URL}/api/fapai/map/communities`
+const FAPAI_MAP_HOUSES_API = `${BK_API_BASE_URL}/api/fapai/map/houses`
+const FAPAI_DETAIL_API = `${BK_API_BASE_URL}/api/fapai-houses/detail`
 const BASIC_SETTINGS_API = `${BK_API_BASE_URL}/api/basic-settings`
 const SPECIAL_ASSETS_API = `${BK_API_BASE_URL}/api/special-assets`
 const DISTRICT_LIST_API = 'https://api.ysfp.com.cn/api/common/area/distList'
@@ -84,13 +89,20 @@ function wechatShareHeader(): Record<string, string> {
 // ------- Detail API types -------
 export type HouseDetailRow = {
   id: number
+  sourceId?: number | null
   title: string
   communityName?: string | null
+  plateName?: string | null
+  districtId?: number | null
+  districtAreaCode?: string | null
+  districtWholeName?: string | null
   location?: string | null
   coverPic?: string | null
   detailPic?: string | null
   hpfCoverPic?: string | null
   hpfDetailPic?: string | null
+  backgroundPic?: string | null
+  hpfBackgroundPic?: string | null
   detailAddress?: string | null
   address?: string | null
   area?: number | null
@@ -106,10 +118,21 @@ export type HouseDetailRow = {
   decoration?: string | null
   auctionMode?: string | null
   platform?: string | null
+  auctionEndTime?: string | null
+  auctionStatusCode?: number | null
+  auctionStatusText?: string | null
+  propertyTypeText?: string | null
+  elevatorText?: string | null
+  decorationText?: string | null
+  auctionModeText?: string | null
   guaranteeAmount?: number | null
   markupPrice?: number | null
   discountRate?: number | null
   jumpLink?: string | null
+  fileList?: string | null
+  posterImage?: string | null
+  galleryImages?: string[] | null
+  gallery_images?: string[] | null
   phone?: string | null
   mobile?: string | null
   contactName?: string | null
@@ -121,6 +144,8 @@ export type HouseDetailRow = {
 type HouseDetailResponse = {
   code?: number
   data?: HouseDetailRow
+  ok?: boolean
+  result?: HouseDetailRow
 }
 
 // ------- Map API types -------
@@ -631,6 +656,98 @@ type DjlMapCommunitiesResponse = {
   }
 }
 
+export type FapaiMapDistrictRow = {
+  areaCode?: string
+  areaName?: string
+  displayName?: string
+  longitude?: number | null
+  latitude?: number | null
+  houseCount?: number | null
+  communityCount?: number | null
+  subAreaCount?: number | null
+  priceText?: string | null
+}
+
+type FapaiMapDistrictsResponse = {
+  ok?: boolean
+  result?: {
+    items?: FapaiMapDistrictRow[]
+    itemCount?: number
+  }
+}
+
+export type FapaiMapSubAreaRow = {
+  areaCode?: string
+  areaName?: string
+  subAreaName?: string
+  longitude?: number | null
+  latitude?: number | null
+  communityCount?: number | null
+  houseCount?: number | null
+  priceText?: string | null
+}
+
+type FapaiMapSubAreasResponse = {
+  ok?: boolean
+  result?: {
+    items?: FapaiMapSubAreaRow[]
+    itemCount?: number
+  }
+}
+
+export type FapaiMapCommunityRow = {
+  communityId?: string
+  communityName?: string
+  areaCode?: string
+  areaName?: string
+  subAreaName?: string
+  longitude?: number | null
+  latitude?: number | null
+  houseCount?: number | null
+  priceText?: string | null
+}
+
+type FapaiMapCommunitiesResponse = {
+  ok?: boolean
+  result?: {
+    items?: FapaiMapCommunityRow[]
+    itemCount?: number
+  }
+}
+
+export type FapaiMapHouseRow = {
+  id?: number
+  sourceId?: number | null
+  title?: string | null
+  communityId?: string
+  communityName?: string
+  coverPic?: string | null
+  areaCode?: string
+  subAreaName?: string
+  detailAddress?: string | null
+  area?: number | null
+  layout?: string | null
+  orientation?: string | null
+  startingPrice?: number | null
+  marketPrice?: number | null
+  auctionTime?: string | null
+  auctionStatusText?: string | null
+  longitude?: number | null
+  latitude?: number | null
+}
+
+type FapaiMapHousesResponse = {
+  ok?: boolean
+  result?: {
+    communityId?: string
+    communityName?: string
+    areaCode?: string
+    subAreaName?: string
+    total?: number
+    items?: FapaiMapHouseRow[]
+  }
+}
+
 export type BkMapHouseRow = {
   id?: number
   captureDate?: string | null
@@ -717,13 +834,45 @@ export function requestHouseTypeList(query: Partial<HouseListQuery>): Promise<{ 
   })
 }
 
-export function requestHouseDetail(id: number): Promise<HouseDetailRow> {
+export function requestHouseDetail(id: number, options?: { sourceId?: number | null }): Promise<HouseDetailRow> {
   return new Promise((resolve, reject) => {
+    const sourceId = Number(options?.sourceId || 0) || 0
+    const fallbackToUpstream = () => {
+      wx.request({
+        url: `${HOUSE_DETAIL_API}/${sourceId || id}`,
+        method: 'GET',
+        success: (fallbackRes) => {
+          const fallbackData = (fallbackRes.data || {}) as HouseDetailResponse
+          if (fallbackData.code !== 200 || !fallbackData.data) {
+            reject(new Error('API_CODE_ERROR'))
+            return
+          }
+          resolve(fallbackData.data)
+        },
+        fail: () => reject(new Error('NETWORK_FAIL')),
+      })
+    }
+
     wx.request({
-      url: `${HOUSE_DETAIL_API}/${id}`,
+      url: sourceId ? FAPAI_DETAIL_API : `${HOUSE_DETAIL_API}/${id}`,
       method: 'GET',
+      header: sourceId ? wechatShareHeader() : undefined,
+      data: sourceId
+        ? withWechatShareKey({
+            id,
+            sourceId,
+          })
+        : undefined,
       success: (res) => {
         const responseData = (res.data || {}) as HouseDetailResponse
+        if (sourceId) {
+          if (!responseData.ok || !responseData.result) {
+            fallbackToUpstream()
+            return
+          }
+          resolve(responseData.result)
+          return
+        }
         if (responseData.code !== 200 || !responseData.data) {
           reject(new Error('API_CODE_ERROR'))
           return
@@ -977,6 +1126,98 @@ export function requestDjlMapCommunities(params: {
           return
         }
         resolve(responseData.result.items || [])
+      },
+      fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
+    })
+  })
+}
+
+export function requestFapaiMapDistricts(): Promise<FapaiMapDistrictRow[]> {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: FAPAI_MAP_DISTRICTS_API,
+      method: 'GET',
+      header: wechatShareHeader(),
+      data: withWechatShareKey(),
+      success: (res) => {
+        const responseData = (res.data || {}) as FapaiMapDistrictsResponse
+        if (!responseData.ok || !responseData.result) {
+          reject(new Error('API_CODE_ERROR'))
+          return
+        }
+        resolve(responseData.result.items || [])
+      },
+      fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
+    })
+  })
+}
+
+export function requestFapaiMapSubAreas(params: {
+  areaCode: string
+}): Promise<FapaiMapSubAreaRow[]> {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: FAPAI_MAP_SUB_AREAS_API,
+      method: 'GET',
+      header: wechatShareHeader(),
+      data: withWechatShareKey(params as unknown as Record<string, unknown>),
+      success: (res) => {
+        const responseData = (res.data || {}) as FapaiMapSubAreasResponse
+        if (!responseData.ok || !responseData.result) {
+          reject(new Error('API_CODE_ERROR'))
+          return
+        }
+        resolve(responseData.result.items || [])
+      },
+      fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
+    })
+  })
+}
+
+export function requestFapaiMapCommunities(params: {
+  areaCode: string
+  subAreaName: string
+}): Promise<FapaiMapCommunityRow[]> {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: FAPAI_MAP_COMMUNITIES_API,
+      method: 'GET',
+      header: wechatShareHeader(),
+      data: withWechatShareKey(params as unknown as Record<string, unknown>),
+      success: (res) => {
+        const responseData = (res.data || {}) as FapaiMapCommunitiesResponse
+        if (!responseData.ok || !responseData.result) {
+          reject(new Error('API_CODE_ERROR'))
+          return
+        }
+        resolve(responseData.result.items || [])
+      },
+      fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
+    })
+  })
+}
+
+export function requestFapaiMapHouses(params: {
+  communityId: string
+}): Promise<{ items: FapaiMapHouseRow[]; total: number; communityName?: string; subAreaName?: string }> {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: FAPAI_MAP_HOUSES_API,
+      method: 'GET',
+      header: wechatShareHeader(),
+      data: withWechatShareKey(params as unknown as Record<string, unknown>),
+      success: (res) => {
+        const responseData = (res.data || {}) as FapaiMapHousesResponse
+        if (!responseData.ok || !responseData.result) {
+          reject(new Error('API_CODE_ERROR'))
+          return
+        }
+        resolve({
+          items: responseData.result.items || [],
+          total: Number(responseData.result.total || 0),
+          communityName: responseData.result.communityName,
+          subAreaName: responseData.result.subAreaName,
+        })
       },
       fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
     })

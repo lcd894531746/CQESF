@@ -33,7 +33,7 @@
     <scroll-view class="list-scroll" scroll-y lower-threshold="120" bindscrolltolower="onLoadMore">
       <view class="list-wrap">
         <block wx:for="{{list}}" wx:key="id">
-          <view class="house-row" data-id="{{item.id}}" bindtap="onHouseTap">
+          <view class="house-row" data-id="{{item.id}}" data-sourceid="{{item.sourceId}}" bindtap="onHouseTap">
             <view class="img-box">
               <image class="house-img" src="{{item.image}}" mode="aspectFill"></image>
               <image class="auction-badge" wx:if="{{item.auctionModeBadge}}" src="{{item.auctionModeBadge}}" mode="aspectFit"></image>

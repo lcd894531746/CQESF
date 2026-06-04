@@ -23,8 +23,9 @@ const {
 const { queryMapBubbles, queryMapHouseList, queryMapHouses, queryMapHouseCard } = require('./mapQueryService');
 const { queryDetailByListingId } = require('./ershouDetailQueryService');
 const { queryDjlHouseList, queryDjlDistrictOptions } = require('./djlHouseQueryService');
-const { queryFapaiHouseList, queryFapaiDistrictOptions, exportFapaiHouseWorkbook } = require('./fapaiHouseQueryService');
+const { queryFapaiHouseList, queryFapaiDistrictOptions, queryFapaiHouseDetail, exportFapaiHouseWorkbook } = require('./fapaiHouseQueryService');
 const { queryDjlMapDistricts, queryDjlMapSubAreas, queryDjlMapCommunities } = require('./djlMapQueryService');
+const { queryFapaiMapDistricts, queryFapaiMapSubAreas, queryFapaiMapCommunities, queryFapaiMapHouses } = require('./fapaiMapQueryService');
 const { listDjlSyncTasks, getLatestRunningDjlSyncTask } = require('./djlSyncQueryService');
 const { enqueueDjlFullSync, startDjlFullSync } = require('./djlSyncService');
 const { rebuildDjlSubAreaCenters, refreshDjlDistrictMetrics } = require('./djlSubAreaService');
@@ -2761,12 +2762,69 @@ async function createApp() {
     res.json({ ok: true, result });
   }));
 
+  app.get('/api/fapai-houses/detail', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+    const result = await queryFapaiHouseDetail(pool, {
+      id: req.query.id,
+      sourceId: req.query.sourceId,
+    });
+    if (!result) {
+      res.status(404).json({ ok: false, message: 'Fapai house not found' });
+      return;
+    }
+    res.json({ ok: true, result });
+  }));
+
   app.get('/api/fapai-houses/export', requireRoleLevel(3), asyncHandler(async (req, res) => {
     const result = await exportFapaiHouseWorkbook(pool);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(result.fileName)}`);
     res.setHeader('Content-Length', String(result.buffer.length));
     res.end(Buffer.from(result.buffer));
+  }));
+
+  app.get('/api/fapai/map/districts', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+    const items = await queryFapaiMapDistricts(pool);
+    res.json({
+      ok: true,
+      result: {
+        items,
+        itemCount: items.length,
+      },
+    });
+  }));
+
+  app.get('/api/fapai/map/sub-areas', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+    const items = await queryFapaiMapSubAreas(pool, {
+      areaCode: req.query.areaCode,
+    });
+    res.json({
+      ok: true,
+      result: {
+        items,
+        itemCount: items.length,
+      },
+    });
+  }));
+
+  app.get('/api/fapai/map/communities', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+    const items = await queryFapaiMapCommunities(pool, {
+      areaCode: req.query.areaCode,
+      subAreaName: req.query.subAreaName,
+    });
+    res.json({
+      ok: true,
+      result: {
+        items,
+        itemCount: items.length,
+      },
+    });
+  }));
+
+  app.get('/api/fapai/map/houses', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+    const result = await queryFapaiMapHouses(pool, {
+      communityId: req.query.communityId,
+    });
+    res.json({ ok: true, result });
   }));
 
   app.post('/api/djl/sync/run', requireRoleLevel(1), asyncHandler(async (req, res) => {

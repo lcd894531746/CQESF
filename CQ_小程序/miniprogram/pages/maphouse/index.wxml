@@ -44,7 +44,7 @@
       <view class="drawer-head">
         <view class="drawer-title-wrap">
           <view class="drawer-title">{{activeCommunityName}}</view>
-          <view class="drawer-subtitle">当前小区低首付房源</view>
+          <view class="drawer-subtitle">{{sourceType === 'ershou' ? '当前小区低首付房源' : '当前小区法拍房源'}}</view>
         </view>
         <view class="drawer-close" bindtap="onDrawerCloseTap">关闭</view>
       </view>
@@ -55,7 +55,7 @@
             class="drawer-card"
             data-id="{{item.id}}"
             data-housecode="{{item.houseCode}}"
-            bindtap="onErshouHouseTap"
+            bindtap="{{sourceType === 'ershou' ? 'onErshouHouseTap' : 'onAuctionHouseTap'}}"
           >
             <image wx:if="{{item.hasImage}}" class="drawer-card-image" src="{{item.image}}" mode="aspectFill"></image>
             <view wx:else class="drawer-card-image empty-resource">
@@ -79,9 +79,13 @@
                 <text class="drawer-price-main">{{item.totalPriceText}}</text>
                 <text class="drawer-price-sub">{{item.unitPriceText}}</text>
               </view>
-              <view class="drawer-loan-row">
+              <view wx:if="{{sourceType === 'ershou'}}" class="drawer-loan-row">
                 <text class="drawer-loan-item">首付 {{item.downPaymentText}}</text>
                 <text class="drawer-loan-item drawer-loan-monthly">月供 {{item.monthlyPaymentText}}</text>
+              </view>
+              <view wx:else class="drawer-auction-row">
+                <text class="drawer-auction-item">{{item.downPaymentText}}</text>
+                <text class="drawer-auction-item drawer-auction-highlight">{{item.monthlyPaymentText}}</text>
               </view>
             </view>
           </view>

@@ -46,7 +46,7 @@
       <view class="waterfall">
         <view class="left-col">
           <block wx:for="{{feedLeft}}" wx:key="id">
-            <view class="house-card" data-id="{{item.id}}" bindtap="onHouseTap">
+            <view class="house-card" data-id="{{item.id}}" data-sourceid="{{item.sourceId}}" bindtap="onHouseTap">
               <view class="house-image-wrap">
                 <image class="house-image" src="{{item.image}}" mode="aspectFill"></image>
                 <image class="auction-mode-badge" wx:if="{{item.auctionModeBadge}}" src="{{item.auctionModeBadge}}" mode="aspectFit" />

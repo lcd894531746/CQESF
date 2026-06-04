@@ -311,6 +311,27 @@
   font-weight: 900;
 }
 
+.drawer-auction-row {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8rpx;
+}
+
+.drawer-auction-item {
+  min-width: 0;
+  color: #64748b;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 28rpx;
+  white-space: nowrap;
+}
+
+.drawer-auction-highlight {
+  color: #175cd3;
+}
+
 .drawer-price-main {
   color: #f04438;
   font-size: 30rpx;

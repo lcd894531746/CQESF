@@ -7,18 +7,21 @@ const exporting = ref(false)
 const rows = ref([])
 const districtOptions = ref([])
 const pageJumpInput = ref('1')
+
 const pagination = reactive({
   page: 1,
   pageSize: 20,
   total: 0,
   totalPages: 0,
 })
+
 const filters = reactive({
   title: '',
   districtId: '',
   startDate: '',
   endDate: '',
 })
+
 const message = reactive({
   type: '',
   text: '',
@@ -51,18 +54,6 @@ function padDatePart(value) {
   return String(value).padStart(2, '0')
 }
 
-function formatDateTime(value) {
-  const date = toDate(value)
-  if (!date) return value || '-'
-  const yyyy = date.getFullYear()
-  const mm = padDatePart(date.getMonth() + 1)
-  const dd = padDatePart(date.getDate())
-  const hh = padDatePart(date.getHours())
-  const mi = padDatePart(date.getMinutes())
-  const ss = padDatePart(date.getSeconds())
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`
-}
-
 function formatDateLine(value) {
   const date = toDate(value)
   if (!date) return '-'
@@ -91,10 +82,12 @@ function buildParams(page = 1) {
     page,
     pageSize: pagination.pageSize,
   }
+
   if (String(filters.title || '').trim()) params.title = String(filters.title).trim()
   if (String(filters.districtId || '').trim()) params.districtId = String(filters.districtId).trim()
   if (String(filters.startDate || '').trim()) params.startDate = String(filters.startDate).trim()
   if (String(filters.endDate || '').trim()) params.endDate = String(filters.endDate).trim()
+
   return params
 }
 
@@ -241,6 +234,7 @@ onMounted(async () => {
             <col class="col-title" />
             <col class="col-district" />
             <col class="col-build-year" />
+            <col class="col-decoration" />
             <col class="col-list-time" />
             <col class="col-crawl-time" />
           </colgroup>
@@ -248,9 +242,10 @@ onMounted(async () => {
             <tr>
               <th>标题</th>
               <th>区域</th>
-              <th>房屋建立时间</th>
+              <th>房屋建成时间</th>
+              <th>装修类型</th>
               <th>房屋上架时间</th>
-              <th>时间</th>
+              <th>采集时间</th>
             </tr>
           </thead>
           <tbody>
@@ -264,6 +259,9 @@ onMounted(async () => {
               <td class="fapai-build-cell">
                 <span class="year-pill">{{ formatBuildYear(item.buildYear) }}</span>
               </td>
+              <td class="fapai-decoration-cell">
+                <span class="decoration-pill">{{ item.decorationText || '-' }}</span>
+              </td>
               <td class="fapai-time-cell is-primary">
                 <span class="time-date">{{ formatDateLine(item.createTime) }}</span>
                 <span class="time-clock">{{ formatTimeLine(item.createTime) }}</span>
@@ -274,7 +272,7 @@ onMounted(async () => {
               </td>
             </tr>
             <tr v-if="!loading && rows.length === 0">
-              <td colspan="5" class="empty-cell">暂无法拍房源</td>
+              <td colspan="6" class="empty-cell">暂无法拍房源</td>
             </tr>
           </tbody>
         </table>
@@ -331,11 +329,11 @@ onMounted(async () => {
 }
 
 .fapai-house-table {
-  min-width: 1080px;
+  min-width: 1200px;
 }
 
 .fapai-house-table .col-title {
-  width: 42%;
+  width: 36%;
 }
 
 .fapai-house-table .col-district {
@@ -343,15 +341,19 @@ onMounted(async () => {
 }
 
 .fapai-house-table .col-build-year {
-  width: 14%;
+  width: 12%;
+}
+
+.fapai-house-table .col-decoration {
+  width: 12%;
 }
 
 .fapai-house-table .col-list-time {
-  width: 18%;
+  width: 14%;
 }
 
 .fapai-house-table .col-crawl-time {
-  width: 18%;
+  width: 14%;
 }
 
 .fapai-house-table thead th {
@@ -376,7 +378,9 @@ onMounted(async () => {
   word-break: break-word;
 }
 
-.fapai-district-cell {
+.fapai-district-cell,
+.fapai-build-cell,
+.fapai-decoration-cell {
   white-space: nowrap;
 }
 
@@ -391,10 +395,6 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.fapai-build-cell {
-  white-space: nowrap;
-}
-
 .year-pill {
   display: inline-flex;
   align-items: center;
@@ -404,6 +404,18 @@ onMounted(async () => {
   border-radius: 999px;
   background: #f3eee4;
   color: #4b4f5d;
+  font-weight: 600;
+}
+
+.decoration-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #e8f1ec;
+  color: #2f6b49;
   font-weight: 600;
 }
 

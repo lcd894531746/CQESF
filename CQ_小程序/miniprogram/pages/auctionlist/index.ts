@@ -7,6 +7,7 @@ type HouseListQuery = import('../../services/house').HouseListQuery
 
 type HouseRow = {
   id: number
+  sourceId?: number | null
   title: string
   communityName?: string | null
   coverPic: string
@@ -22,6 +23,7 @@ type HouseRow = {
 
 type HouseItem = {
   id: number
+  sourceId?: number | null
   communityNameText: string
   title: string
   areaText: string
@@ -102,6 +104,7 @@ function normalizeRows(rows: HouseRow[]): HouseItem[] {
     const status = parseAuctionStatus(row.status)
     return {
       id: row.id,
+      sourceId: row.sourceId ?? row.id,
       communityNameText: row.communityName || row.title || '未知小区',
       title: row.title || '房源',
       areaText: `${Number(row.area || 0) || '-'}㎡`,
@@ -328,8 +331,9 @@ Page({
       return
     }
     const id = Number(e.currentTarget.dataset.id || 0)
+    const sourceId = Number((e.currentTarget.dataset as { sourceid?: string | number }).sourceid || 0)
     if (!id) return
-    wx.navigateTo({ url: `/pages/housedetail/index?id=${id}` })
+    wx.navigateTo({ url: `/pages/housedetail/index?id=${id}&sourceId=${sourceId || id}` })
   },
   onShareAppMessage() {
     const profile = readWechatShareProfile()

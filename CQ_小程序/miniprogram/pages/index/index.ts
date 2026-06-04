@@ -9,6 +9,7 @@ type HouseListQuery = import('../../services/house').HouseListQuery
 
 type YinshanRow = {
   id: number
+  sourceId?: number | null
   title: string
   communityName?: string | null
   coverPic: string
@@ -28,6 +29,7 @@ type YinshanRow = {
 
 type HouseItem = {
   id: number
+  sourceId?: number | null
   communityNameText: string
   auctionModeBadge: string
   position: string
@@ -152,6 +154,7 @@ function normalizeYinshanRows(rows: YinshanRow[], districtMap: Map<number, strin
 
     return {
       id: row.id,
+      sourceId: row.sourceId ?? row.id,
       communityNameText: row.communityName || row.title || '未知小区',
       auctionModeBadge,
       position: row.detailAddress || row.title || `${district}房源`,
@@ -670,9 +673,10 @@ Page({
       return
     }
     const id = Number(e.currentTarget.dataset.id)
+    const sourceId = Number((e.currentTarget.dataset as { sourceid?: string | number }).sourceid || 0)
     if (!id) return
     wx.navigateTo({
-      url: `/pages/housedetail/index?id=${id}`,
+      url: `/pages/housedetail/index?id=${id}&sourceId=${sourceId || id}`,
     })
   },
 

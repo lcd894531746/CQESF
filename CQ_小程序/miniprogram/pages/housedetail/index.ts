@@ -46,7 +46,14 @@ function dedupeImages(list: string[]): string[] {
 }
 
 function resolveImages(row: HouseDetailRow): string[] {
-  const images = cleanYinshanImageUrls(dedupeImages(splitImageUrls(row.detailPic)))
+  const images = cleanYinshanImageUrls(dedupeImages([
+    ...splitImageUrls(row.detailPic),
+    ...splitImageUrls(row.coverPic),
+    ...splitImageUrls(row.hpfDetailPic),
+    ...splitImageUrls(row.hpfCoverPic),
+    ...(((row.galleryImages || row.gallery_images || []) as string[]).map((item) => String(item || '').trim()).filter(Boolean)),
+    ...splitImageUrls(row.posterImage),
+  ]))
   return images.length > 0 ? images : ['/assets/icons/city-icon.png']
 }
 
@@ -71,8 +78,8 @@ function formatNumberText(value?: number | null, unit = ''): string {
 function guessDecorationText(code?: string | null): string {
   if (!code) return '未知'
   if (code === '1') return '简装'
-  if (code === '2') return '精装修'
-  if (code === '3') return '毛坯'
+  if (code === '2') return '中装'
+  if (code === '3') return '精装'
   return '未知'
 }
 
@@ -176,19 +183,6 @@ function canViewHouseDetail(): boolean {
   }
 }
 
-function readWechatSharePhone(): string {
-  try {
-    const cached = wx.getStorageSync(WECHAT_LOGIN_STORAGE_KEY)
-    if (!cached) return ''
-    const source = typeof cached === 'string' ? JSON.parse(cached) : cached
-    if (!canWechatShare(source)) return ''
-    return String(source?.phoneNumber || source?.matchedPerson?.phone || source?.openid || '').trim()
-  } catch (error) {
-    console.warn('read wechat share openid failed:', error)
-    return ''
-  }
-}
-
 function readWechatShareKey(): string {
   try {
     const cached = wx.getStorageSync(CURRENT_SHARE_STORAGE_KEY)
@@ -218,7 +212,7 @@ Page({
       infoList: [] as InfoItem[],
       auctionHint: '',
       externalLink: '',
-      contactName: '璧勪骇椤鹃棶',
+      contactName: '资产顾问',
       contactPhone: '4008001234',
       contactAvatar: '',
       hasContactAvatar: false,
@@ -240,18 +234,19 @@ Page({
       return
     }
     const id = Number(query.id || 0)
-    if (!id) {
+    const sourceId = Number(query.sourceId || 0)
+    if (!id && !sourceId) {
       setTimeout(() => wx.navigateBack({ delta: 1 }), 600)
       return
     }
-    ;(this as any).loadDetail(id)
+    ;(this as any).loadDetail(id, sourceId)
   },
   onShow() {
     syncWechatShareMenu(readWechatLoginCache())
   },
-  async loadDetail(id: number) {
+  async loadDetail(id: number, sourceId?: number) {
     try {
-      const row = await requestHouseDetail(id)
+      const row = await requestHouseDetail(id || sourceId || 0, sourceId ? { sourceId } : undefined)
       this.setData({
         currentImageIndex: 0,
         house: toDetailHouse(row),
@@ -342,7 +337,7 @@ Page({
   onOpenExternalLinkTap() {
     const url = String(this.data.house.externalLink || '').trim()
     if (!url) {
-      wx.showToast({ title: '鏆傛棤閾炬帴', icon: 'none' })
+      wx.showToast({ title: '暂无链接', icon: 'none' })
       return
     }
     if (/^https:\/\//i.test(url)) {
@@ -355,8 +350,8 @@ Page({
       data: url,
       success: () => {
         wx.showModal({
-          title: '鏃犳硶鐩存帴鎵撳紑',
-          content: '褰撳墠鏉ユ簮鍦板潃宸插鍒板壀璐村澘锛岃鍦ㄦ祻瑙堝櫒涓墦寮€銆?',
+          title: '链接已复制',
+          content: '当前链接无法直接在小程序内打开，已复制到剪贴板，请粘贴到浏览器查看。',
           showCancel: false,
         })
       },
@@ -365,13 +360,13 @@ Page({
   onOpenExternalSourceTap() {
     const rawUrl = String(this.data.house.externalLink || '').trim()
     if (!rawUrl) {
-      wx.showToast({ title: '\u6682\u65e0\u94fe\u63a5', icon: 'none' })
+      wx.showToast({ title: '暂无链接', icon: 'none' })
       return
     }
     wx.setClipboardData({
       data: rawUrl,
       success: () => {
-        wx.showToast({ title: '\u5df2\u590d\u5236', icon: 'none' })
+        wx.showToast({ title: '已复制', icon: 'none' })
       },
     })
   },

@@ -3,6 +3,10 @@ const ExcelJS = require('exceljs');
 const TABLE_NAME = 'fp_house_listings';
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
+const COLUMN_CACHE_TTL_MS = 60 * 1000;
+
+let cachedTableColumns = null;
+let cachedTableColumnsAt = 0;
 
 function toPositiveInt(value, fallback) {
   const parsed = parseInt(value, 10);
@@ -12,6 +16,41 @@ function toPositiveInt(value, fallback) {
 
 function trimText(value) {
   return String(value || '').trim();
+}
+
+async function getTableColumns(pool) {
+  const now = Date.now();
+  if (cachedTableColumns && (now - cachedTableColumnsAt) < COLUMN_CACHE_TTL_MS) {
+    return cachedTableColumns;
+  }
+
+  const [rows] = await pool.query(`SHOW COLUMNS FROM \`${TABLE_NAME}\``);
+  cachedTableColumns = new Set(
+    (rows || []).map((row) => trimText(row.Field)).filter(Boolean)
+  );
+  cachedTableColumnsAt = now;
+  return cachedTableColumns;
+}
+
+function selectColumnOrNull(columnNames, columnName) {
+  return columnNames.has(columnName)
+    ? `\`${columnName}\``
+    : `NULL AS \`${columnName}\``;
+}
+
+function parseImageCsv(value) {
+  return trimText(value)
+    .split(',')
+    .map((item) => trimText(item))
+    .filter(Boolean);
+}
+
+function pickFirstImage(...values) {
+  for (const value of values) {
+    const images = parseImageCsv(value);
+    if (images.length > 0) return images[0];
+  }
+  return '';
 }
 
 function toBoolean(value, fallback = false) {
@@ -117,6 +156,64 @@ function normalizeListRow(row) {
     districtName: extractDistrictName(row.district_whole_name),
     communityName: trimText(row.community_name),
     buildYear: trimText(row.build_year),
+    decorationText: trimText(row.decoration_text),
+    createTime: toIsoString(row.create_time),
+    createdAt: toIsoString(row.created_at),
+  };
+}
+
+function normalizeDetailRow(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id || 0),
+    sourceId: row.source_id === null || row.source_id === undefined ? null : Number(row.source_id),
+    title: trimText(row.title),
+    communityName: trimText(row.community_name),
+    plateName: trimText(row.plate_name),
+    districtId: row.district_id === null || row.district_id === undefined ? null : Number(row.district_id),
+    districtAreaCode: trimText(row.district_area_code),
+    districtWholeName: trimText(row.district_whole_name),
+    address: trimText(row.address),
+    detailAddress: trimText(row.detail_address),
+    location: trimText(row.location),
+    coverPic: trimText(row.cover_pic),
+    detailPic: trimText(row.detail_pic),
+    backgroundPic: trimText(row.background_pic),
+    hpfCoverPic: trimText(row.hpf_cover_pic),
+    hpfDetailPic: trimText(row.hpf_detail_pic),
+    hpfBackgroundPic: trimText(row.hpf_background_pic),
+    posterImage: pickFirstImage(row.cover_pic, row.detail_pic, row.hpf_cover_pic, row.hpf_detail_pic),
+    galleryImages: Array.from(new Set([
+      ...parseImageCsv(row.cover_pic),
+      ...parseImageCsv(row.detail_pic),
+      ...parseImageCsv(row.hpf_cover_pic),
+      ...parseImageCsv(row.hpf_detail_pic),
+    ])),
+    area: row.area === null || row.area === undefined ? null : Number(row.area),
+    layout: trimText(row.layout),
+    orientation: trimText(row.orientation),
+    startingPrice: row.starting_price === null || row.starting_price === undefined ? null : Number(row.starting_price),
+    marketPrice: row.market_price === null || row.market_price === undefined ? null : Number(row.market_price),
+    startingUnitPrice: row.starting_unit_price === null || row.starting_unit_price === undefined ? null : Number(row.starting_unit_price),
+    auctionTime: toIsoString(row.auction_time),
+    auctionEndTime: toIsoString(row.auction_end_time),
+    floorLevel: trimText(row.floor_level),
+    elevator: trimText(row.elevator_code),
+    elevatorText: trimText(row.elevator_text),
+    buildYear: trimText(row.build_year),
+    decoration: trimText(row.decoration_code),
+    decorationText: trimText(row.decoration_text),
+    auctionMode: trimText(row.auction_mode_code),
+    auctionModeText: trimText(row.auction_mode_text),
+    auctionStatusCode: row.auction_status_code === null || row.auction_status_code === undefined ? null : Number(row.auction_status_code),
+    auctionStatusText: trimText(row.auction_status_text),
+    propertyTypeText: trimText(row.property_type_text),
+    platform: trimText(row.platform),
+    guaranteeAmount: row.guarantee_amount === null || row.guarantee_amount === undefined ? null : Number(row.guarantee_amount),
+    markupPrice: row.markup_price === null || row.markup_price === undefined ? null : Number(row.markup_price),
+    discountRate: row.discount_rate === null || row.discount_rate === undefined ? null : Number(row.discount_rate),
+    jumpLink: trimText(row.jump_link),
+    fileList: trimText(row.file_list),
     createTime: toIsoString(row.create_time),
     createdAt: toIsoString(row.created_at),
   };
@@ -179,6 +276,7 @@ async function queryFapaiHouseList(pool, options = {}) {
         district_whole_name,
         community_name,
         build_year,
+        decoration_text,
         create_time,
         created_at
       FROM \`${TABLE_NAME}\`
@@ -196,6 +294,85 @@ async function queryFapaiHouseList(pool, options = {}) {
     totalPages: includeTotal && total > 0 ? Math.ceil(total / pageSize) : 0,
     items: rows.map(normalizeListRow),
   };
+}
+
+async function queryFapaiHouseDetail(pool, options = {}) {
+  const id = Number(options.id || 0);
+  const sourceId = Number(options.sourceId || 0);
+  if (!id && !sourceId) return null;
+  const columnNames = await getTableColumns(pool);
+
+  const conditions = [];
+  const values = [];
+  if (id) {
+    conditions.push('id = ?');
+    values.push(id);
+  }
+  if (sourceId) {
+    conditions.push('source_id = ?');
+    values.push(sourceId);
+  }
+
+  const [rows] = await pool.query(
+    `
+      SELECT
+        id,
+        source_id,
+        title,
+        community_name,
+        plate_name,
+        district_id,
+        district_area_code,
+        district_whole_name,
+        address,
+        detail_address,
+        location,
+        ${selectColumnOrNull(columnNames, 'cover_pic')},
+        ${selectColumnOrNull(columnNames, 'detail_pic')},
+        ${selectColumnOrNull(columnNames, 'background_pic')},
+        ${selectColumnOrNull(columnNames, 'hpf_cover_pic')},
+        ${selectColumnOrNull(columnNames, 'hpf_detail_pic')},
+        ${selectColumnOrNull(columnNames, 'hpf_background_pic')},
+        area,
+        layout,
+        orientation,
+        starting_price,
+        market_price,
+        starting_unit_price,
+        auction_time,
+        auction_end_time,
+        floor_level,
+        elevator_code,
+        elevator_text,
+        build_year,
+        decoration_code,
+        decoration_text,
+        auction_mode_code,
+        auction_mode_text,
+        auction_status_code,
+        auction_status_text,
+        property_type_text,
+        platform,
+        guarantee_amount,
+        markup_price,
+        discount_rate,
+        jump_link,
+        file_list,
+        create_time,
+        created_at
+      FROM \`${TABLE_NAME}\`
+      WHERE ${conditions.length > 1 ? `(${conditions.join(' OR ')})` : conditions[0]}
+      ORDER BY ${id ? 'id = ? DESC,' : ''} ${sourceId ? 'source_id = ? DESC,' : ''} created_at DESC
+      LIMIT 1
+    `,
+    [
+      ...values,
+      ...(id ? [id] : []),
+      ...(sourceId ? [sourceId] : []),
+    ]
+  );
+
+  return normalizeDetailRow(rows?.[0] || null);
 }
 
 function buildSheetName(districtName, usedNames) {
@@ -384,5 +561,6 @@ async function exportFapaiHouseWorkbook(pool) {
 module.exports = {
   queryFapaiHouseList,
   queryFapaiDistrictOptions,
+  queryFapaiHouseDetail,
   exportFapaiHouseWorkbook,
 };

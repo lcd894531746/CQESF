@@ -38,6 +38,20 @@ DEFAULT_CITY_NAME = "重庆市区"
 DEFAULT_HOUSE_TYPE_ID = 2
 DEFAULT_PAGE_SIZE = 100
 DEFAULT_TABLE_NAME = "fp_house_listings"
+DJL_COMMUNITY_TABLE_NAME = "djl_community_map_rel"
+NEAREST_SUB_AREA_MAX_DISTANCE_METERS = 1500
+VALID_SUB_AREA_CODES = {"a1", "a2", "a4", "a5", "a6", "a7", "a8"}
+DISTRICT_AREA_CODE_ALIASES = {
+    "500103": "a1",
+    "500106": "a2",
+    "500108": "a4",
+    "500107": "a5",
+    "500104": "a6",
+    "500105": "a7",
+    "500109": "a7",
+    "500112": "a7",
+    "500113": "a8",
+}
 
 SYNC_TASK_TABLE_NAME = "djl_sync_tasks"
 TASK_TYPE_FAPAI_SYNC = "fapai_sync"
@@ -149,6 +163,12 @@ CREATE TABLE IF NOT EXISTS `{table_name}` (
   start_aver_price DECIMAL(12, 2) NULL,
   market_aver_price DECIMAL(12, 2) NULL,
   auction_count INT NULL,
+  cover_pic LONGTEXT NULL,
+  detail_pic LONGTEXT NULL,
+  background_pic LONGTEXT NULL,
+  hpf_cover_pic LONGTEXT NULL,
+  hpf_detail_pic LONGTEXT NULL,
+  hpf_background_pic LONGTEXT NULL,
   file_list TEXT NULL,
   house_tags VARCHAR(500) NOT NULL DEFAULT '',
   data_process_memo VARCHAR(255) NOT NULL DEFAULT '',
@@ -209,6 +229,15 @@ DROP_INDEXES = [
     "idx_district_name",
     "idx_update_time",
 ]
+
+ADD_COLUMN_DEFINITIONS = {
+    "cover_pic": "ADD COLUMN `cover_pic` LONGTEXT NULL AFTER `auction_count`",
+    "detail_pic": "ADD COLUMN `detail_pic` LONGTEXT NULL AFTER `cover_pic`",
+    "background_pic": "ADD COLUMN `background_pic` LONGTEXT NULL AFTER `detail_pic`",
+    "hpf_cover_pic": "ADD COLUMN `hpf_cover_pic` LONGTEXT NULL AFTER `background_pic`",
+    "hpf_detail_pic": "ADD COLUMN `hpf_detail_pic` LONGTEXT NULL AFTER `hpf_cover_pic`",
+    "hpf_background_pic": "ADD COLUMN `hpf_background_pic` LONGTEXT NULL AFTER `hpf_detail_pic`",
+}
 
 INSERT_COLUMNS = [
     "source_id",
@@ -271,6 +300,12 @@ INSERT_COLUMNS = [
     "start_aver_price",
     "market_aver_price",
     "auction_count",
+    "cover_pic",
+    "detail_pic",
+    "background_pic",
+    "hpf_cover_pic",
+    "hpf_detail_pic",
+    "hpf_background_pic",
     "file_list",
     "house_tags",
     "data_process_memo",
@@ -358,6 +393,28 @@ def parse_location(value) -> Tuple[Optional[float], Optional[float]]:
         return None, None
     left, right = text.split(",", 1)
     return to_float(left), to_float(right)
+
+
+def haversine_distance(longitude1: Optional[float], latitude1: Optional[float], longitude2: Optional[float], latitude2: Optional[float]) -> Optional[float]:
+    if None in (longitude1, latitude1, longitude2, latitude2):
+        return None
+    earth_radius = 6371000
+    rad = math.pi / 180
+    d_lat = (latitude2 - latitude1) * rad
+    d_lon = (longitude2 - longitude1) * rad
+    a = math.sin(d_lat / 2) ** 2 + math.cos(latitude1 * rad) * math.cos(latitude2 * rad) * math.sin(d_lon / 2) ** 2
+    return 2 * earth_radius * math.asin(math.sqrt(a))
+
+
+def bd09_to_gcj02(longitude: Optional[float], latitude: Optional[float]) -> Tuple[Optional[float], Optional[float]]:
+    if longitude is None or latitude is None:
+        return None, None
+    x_pi = math.pi * 3000.0 / 180.0
+    x = longitude - 0.0065
+    y = latitude - 0.006
+    z = math.sqrt(x * x + y * y) - 0.00002 * math.sin(y * x_pi)
+    theta = math.atan2(y, x) - 0.000003 * math.cos(x * x_pi)
+    return round(z * math.cos(theta), 6), round(z * math.sin(theta), 6)
 
 
 def parse_layout(layout: str) -> Tuple[Optional[int], Optional[int], Optional[int]]:
@@ -468,6 +525,150 @@ def fetch_house_page(page_num: int, page_size: int, city_name: str, house_type_i
     return total, rows
 
 
+def infer_area_code_from_district_name(district_name: str) -> str:
+    normalized = trim_text(district_name)
+    if not normalized:
+        return ""
+    if "渝中" in normalized:
+        return "a1"
+    if "南岸" in normalized:
+        return "a4"
+    if "大渡口" in normalized:
+        return "a6"
+    if "九龙坡" in normalized:
+        return "a5"
+    if "沙坪坝" in normalized:
+        return "a2"
+    if "巴南" in normalized:
+        return "a8"
+    if any(item in normalized for item in ("江北", "北碚", "渝北", "两江")):
+        return "a7"
+    return ""
+
+
+def load_sub_area_matcher(connection) -> Dict[str, List[dict]]:
+    area_map: Dict[str, List[dict]] = {}
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            SELECT
+              community_name,
+              area_code,
+              area_name,
+              sub_area_name,
+              longitude_bd09,
+              latitude_bd09
+            FROM `{DJL_COMMUNITY_TABLE_NAME}`
+            WHERE TRIM(COALESCE(community_name, '')) <> ''
+          """
+        )
+        rows = cursor.fetchall()
+
+    for row in rows:
+        area_code = trim_text(row.get("area_code"))
+        sub_area_name = trim_text(row.get("sub_area_name"))
+        community_name = trim_text(row.get("community_name"))
+        longitude_bd09 = to_float(row.get("longitude_bd09"))
+        latitude_bd09 = to_float(row.get("latitude_bd09"))
+        longitude, latitude = bd09_to_gcj02(longitude_bd09, latitude_bd09)
+        if not area_code or not sub_area_name:
+            continue
+        area_map.setdefault(area_code, []).append(
+            {
+                "community_name": community_name,
+                "sub_area_name": sub_area_name,
+                "longitude": longitude,
+                "latitude": latitude,
+            }
+        )
+    return area_map
+
+
+def normalize_area_code(raw_area_code: str, district_name: str) -> str:
+    area_code = trim_text(raw_area_code).lower()
+    if area_code in VALID_SUB_AREA_CODES:
+        return area_code
+
+    aliased_area_code = DISTRICT_AREA_CODE_ALIASES.get(area_code)
+    if aliased_area_code:
+        return aliased_area_code
+
+    normalized = trim_text(district_name)
+    if not normalized:
+        return ""
+    if "渝中" in normalized:
+        return "a1"
+    if "南岸" in normalized:
+        return "a4"
+    if "大渡口" in normalized:
+        return "a6"
+    if "九龙坡" in normalized:
+        return "a5"
+    if "沙坪坝" in normalized:
+        return "a2"
+    if "巴南" in normalized:
+        return "a8"
+    if any(item in normalized for item in ("江北", "北碚", "渝北", "两江")):
+        return "a7"
+    return ""
+
+
+def attach_plate_name(row: dict, area_community_map: Dict[str, List[dict]]) -> Tuple[Optional[dict], str]:
+    district_name = trim_text(row.get("district_whole_name"))
+    area_code = normalize_area_code(row.get("district_area_code"), district_name)
+    if not area_code:
+        return None, "missing_area_code"
+
+    candidates = area_community_map.get(area_code) or []
+    if not candidates:
+        return None, "missing_area_candidates"
+
+    community_name = trim_text(row.get("community_name"))
+    longitude = to_float(row.get("longitude"))
+    latitude = to_float(row.get("latitude"))
+
+    exact_candidates = [item for item in candidates if trim_text(item.get("community_name")) == community_name]
+    if exact_candidates:
+        if longitude is not None and latitude is not None:
+            nearest_exact = None
+            nearest_distance = None
+            for candidate in exact_candidates:
+                distance = haversine_distance(longitude, latitude, candidate.get("longitude"), candidate.get("latitude"))
+                if distance is None:
+                    continue
+                if nearest_distance is None or distance < nearest_distance:
+                    nearest_distance = distance
+                    nearest_exact = candidate
+            if nearest_exact:
+                row["plate_name"] = trim_text(nearest_exact.get("sub_area_name"))
+                row["district_area_code"] = area_code
+                return row, "matched_exact"
+        first_exact = exact_candidates[0]
+        row["plate_name"] = trim_text(first_exact.get("sub_area_name"))
+        row["district_area_code"] = area_code
+        return row, "matched_exact"
+
+    if longitude is None or latitude is None:
+        return None, "missing_location"
+
+    nearest_candidate = None
+    nearest_distance = None
+    for candidate in candidates:
+        distance = haversine_distance(longitude, latitude, candidate.get("longitude"), candidate.get("latitude"))
+        if distance is None:
+            continue
+        if nearest_distance is None or distance < nearest_distance:
+            nearest_distance = distance
+            nearest_candidate = candidate
+
+    if nearest_candidate is None or nearest_distance is None or nearest_distance > NEAREST_SUB_AREA_MAX_DISTANCE_METERS:
+        return None, "missing_sub_area_match"
+
+    row["plate_name"] = trim_text(nearest_candidate.get("sub_area_name"))
+    row["district_area_code"] = area_code
+    return row, "matched_nearest"
+
+
 def normalize_row(row: dict, city_name: str, district_map: Dict[int, dict]) -> Optional[dict]:
     source_id = to_int(row.get("id"))
     if source_id is None:
@@ -551,6 +752,12 @@ def normalize_row(row: dict, city_name: str, district_map: Dict[int, dict]) -> O
         "start_aver_price": to_float(row.get("startAverPrice")),
         "market_aver_price": to_float(row.get("marketAverPrice")),
         "auction_count": to_int(row.get("auctionCount")),
+        "cover_pic": trim_text(row.get("coverPic")) or None,
+        "detail_pic": trim_text(row.get("detailPic")) or None,
+        "background_pic": trim_text(row.get("backgroundPic")) or None,
+        "hpf_cover_pic": trim_text(row.get("hpfCoverPic")) or None,
+        "hpf_detail_pic": trim_text(row.get("hpfDetailPic")) or None,
+        "hpf_background_pic": trim_text(row.get("hpfBackgroundPic")) or None,
         "file_list": trim_text(row.get("fileList")) or None,
         "house_tags": build_house_tags(row),
         "data_process_memo": trim_text(row.get("dataProcessMemo")),
@@ -592,6 +799,9 @@ def synchronize_table_columns(cursor, table_name: str) -> None:
     for column_name in DROP_COLUMNS:
         if column_name in column_names:
             alter_items.append(f"DROP COLUMN `{column_name}`")
+    for column_name, add_sql in ADD_COLUMN_DEFINITIONS.items():
+        if column_name not in column_names:
+            alter_items.append(add_sql)
 
     if alter_items:
         cursor.execute(f"ALTER TABLE `{table_name}` {', '.join(alter_items)}")
@@ -622,6 +832,42 @@ def upsert_rows(connection, table_name: str, rows: List[dict], batch_size: int =
         for batch in chunked(values, batch_size):
             cursor.executemany(sql, batch)
             written += len(batch)
+    return written
+
+
+def quote_identifier(identifier: str) -> str:
+    return f"`{identifier.replace('`', '``')}`"
+
+
+def build_staging_table_name(table_name: str) -> str:
+    return f"{table_name}__sync_tmp"
+
+
+def build_backup_table_name(table_name: str) -> str:
+    return f"{table_name}__sync_bak"
+
+
+def replace_table_rows(connection, table_name: str, rows: List[dict]) -> int:
+    staging_table_name = build_staging_table_name(table_name)
+    backup_table_name = build_backup_table_name(table_name)
+    main_table_sql = quote_identifier(table_name)
+    staging_table_sql = quote_identifier(staging_table_name)
+    backup_table_sql = quote_identifier(backup_table_name)
+
+    with connection.cursor() as cursor:
+        cursor.execute(f"DROP TABLE IF EXISTS {staging_table_sql}")
+        ensure_table(cursor, staging_table_name)
+        synchronize_table_columns(cursor, staging_table_name)
+
+    written = upsert_rows(connection, staging_table_name, rows)
+
+    with connection.cursor() as cursor:
+        cursor.execute(f"DROP TABLE IF EXISTS {backup_table_sql}")
+        cursor.execute(
+            f"RENAME TABLE {main_table_sql} TO {backup_table_sql}, {staging_table_sql} TO {main_table_sql}"
+        )
+        cursor.execute(f"DROP TABLE IF EXISTS {backup_table_sql}")
+
     return written
 
 
@@ -690,11 +936,16 @@ def sync_houses(
 
     try:
         district_map = fetch_district_map(city_name)
+        area_community_map = load_sub_area_matcher(connection)
         page_num = 1
         total = 0
         fetched_rows = 0
         fetched_page_count = 0
         normalized_rows: List[dict] = []
+        matched_exact_count = 0
+        matched_nearest_count = 0
+        dropped_rows = 0
+        dropped_reason_stats: Dict[str, int] = {}
 
         while True:
             if max_pages is not None and page_num > max_pages:
@@ -709,8 +960,18 @@ def sync_houses(
             page_normalized = []
             for row in rows:
                 normalized = normalize_row(row, city_name, district_map)
-                if normalized:
-                    page_normalized.append(normalized)
+                if not normalized:
+                    continue
+                normalized_with_plate, match_status = attach_plate_name(normalized, area_community_map)
+                if normalized_with_plate:
+                    page_normalized.append(normalized_with_plate)
+                    if match_status == "matched_exact":
+                        matched_exact_count += 1
+                    elif match_status == "matched_nearest":
+                        matched_nearest_count += 1
+                else:
+                    dropped_rows += 1
+                    dropped_reason_stats[match_status] = dropped_reason_stats.get(match_status, 0) + 1
 
             normalized_rows.extend(page_normalized)
             fetched_rows += len(rows)
@@ -732,18 +993,25 @@ def sync_houses(
             "total": total,
             "fetched_rows": fetched_rows,
             "normalized_rows": len(normalized_rows),
+            "matched_exact_rows": matched_exact_count,
+            "matched_nearest_rows": matched_nearest_count,
+            "dropped_rows": dropped_rows,
+            "dropped_reason_stats": dropped_reason_stats,
             "written_rows": 0,
             "table_name": table_name,
+            "write_mode": "full_replace",
             "sync_time": now_text(),
             "dry_run": dry_run,
             "trigger_by_name": trim_text(trigger_by_name),
         }
 
         if not dry_run:
+            if fetched_rows == 0:
+                raise RuntimeError("No houses fetched from upstream API; aborting full replace to avoid clearing existing data")
             with connection.cursor() as cursor:
                 ensure_table(cursor, table_name)
                 synchronize_table_columns(cursor, table_name)
-            written_rows = upsert_rows(connection, table_name, normalized_rows)
+            written_rows = replace_table_rows(connection, table_name, normalized_rows)
             connection.commit()
             result["written_rows"] = written_rows
 

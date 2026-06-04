@@ -1,7 +1,7 @@
 <view class="page">
   <view class="content fixed-panel">
     <view class="notice-bar" wx:if="{{introText}}">
-      <view class="notice-icon">公告</view>
+      <view class="notice-icon">简介</view>
       <view class="notice-marquee">
         <view class="notice-track">
           <text class="notice-text">{{introText}}</text>
@@ -103,7 +103,7 @@
       <view class="waterfall">
       <view class="left-col">
         <block wx:for="{{feedLeft}}" wx:key="id">
-          <view class="house-card" data-id="{{item.id}}" bindtap="onHouseTap">
+          <view class="house-card" data-id="{{item.id}}" data-sourceid="{{item.sourceId}}" bindtap="onHouseTap">
             <view class="house-image-wrap">
               <image class="house-image" src="{{item.image}}" mode="aspectFill"></image>
               <image class="auction-mode-badge" wx:if="{{item.auctionModeBadge}}" src="{{item.auctionModeBadge}}" mode="aspectFit" />
@@ -138,7 +138,7 @@
       </view>
       <view class="right-col">
         <block wx:for="{{feedRight}}" wx:key="id">
-          <view class="house-card" data-id="{{item.id}}" bindtap="onHouseTap">
+          <view class="house-card" data-id="{{item.id}}" data-sourceid="{{item.sourceId}}" bindtap="onHouseTap">
             <view class="house-image-wrap">
               <image class="house-image" src="{{item.image}}" mode="aspectFill"></image>
               <image class="auction-mode-badge" wx:if="{{item.auctionModeBadge}}" src="{{item.auctionModeBadge}}" mode="aspectFit" />
