@@ -378,7 +378,7 @@ Page({
       clearWechatLoginCache()
       this.setData({
         wechatTestStatusText: '需要获取手机号',
-        showPhoneAuthDialog: true,
+        showPhoneAuthDialog: false,
       })
       setTimeout(() => {
         this.syncTabBarSelected()
@@ -388,7 +388,7 @@ Page({
 
     this.loadAuctionStats()
     this.loadBasicSettings()
-    this.refreshByFilter()
+    if (hasWechatAccess(cachedWechatLogin)) this.refreshByFilter()
     setTimeout(() => {
       this.syncTabBarSelected()
     }, 0)
@@ -417,7 +417,7 @@ Page({
     }
     this.syncTabBarSelected()
     this.updateShareMenu()
-    this.updatePhoneAuthDialog()
+    this.updatePhoneAuthDialog(undefined, false)
   },
 
   buildWechatStatusText(profile: WechatTestResult) {
@@ -432,11 +432,29 @@ Page({
     return Boolean(String(profile?.phoneNumber || profile?.matchedPerson?.phone || '').trim())
   },
 
-  updatePhoneAuthDialog(profile?: WechatTestResult) {
+  updatePhoneAuthDialog(profile?: WechatTestResult, forceShow = false) {
     const dataProfile = this.data.wechatTestResult
     const currentProfile = profile || (this.hasCachedPhone(dataProfile) ? dataProfile : readWechatLoginCache())
-    const shouldShow = !this.hasCachedPhone(currentProfile)
-    this.setData({ showPhoneAuthDialog: shouldShow })
+    if (this.hasCachedPhone(currentProfile)) {
+      if (this.data.showPhoneAuthDialog) this.setData({ showPhoneAuthDialog: false })
+      return
+    }
+    if (forceShow) this.setData({ showPhoneAuthDialog: true })
+  },
+
+  promptPhoneAuth(statusText = '请先授权手机号后再查询房源') {
+    this.setData({
+      wechatTestStatusText: statusText,
+      showPhoneAuthDialog: true,
+    })
+  },
+
+  ensurePhoneAuth(statusText?: string) {
+    if (this.hasCachedPhone(this.data.wechatTestResult) || this.hasCachedPhone(readWechatLoginCache())) {
+      return true
+    }
+    this.promptPhoneAuth(statusText)
+    return false
   },
 
   applyWechatProfile(profile: WechatTestResult, statusText?: string) {
@@ -675,6 +693,7 @@ Page({
   },
 
   onHouseTap(e: WechatMiniprogram.CustomEvent<{ id: string | number }>) {
+    if (!this.ensurePhoneAuth('请先授权手机号后再查看房源详情')) return
     if (!hasWechatAccess(this.data.wechatTestResult)) {
       showNoAccessToast(this.data.wechatTestResult.accessMessage)
       return
@@ -688,6 +707,7 @@ Page({
   },
 
   onMapEntryTap() {
+    if (!this.ensurePhoneAuth('请先授权手机号后再使用地图找房')) return
     if (!hasWechatAccess(this.data.wechatTestResult)) {
       showNoAccessToast(this.data.wechatTestResult.accessMessage)
       return
@@ -698,6 +718,7 @@ Page({
   },
 
   onStatCardTap(e: WechatMiniprogram.CustomEvent<{ type: string | number }>) {
+    if (!this.ensurePhoneAuth('请先授权手机号后再查看房源列表')) return
     if (!hasWechatAccess(this.data.wechatTestResult)) {
       showNoAccessToast(this.data.wechatTestResult.accessMessage)
       return
@@ -728,10 +749,12 @@ Page({
   },
 
   onSearchConfirm() {
+    if (!this.ensurePhoneAuth()) return
     this.refreshByFilter()
   },
 
   onSearchTap() {
+    if (!this.ensurePhoneAuth()) return
     this.refreshByFilter()
   },
 

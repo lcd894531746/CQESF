@@ -228,10 +228,10 @@ Page({
     const canView = canUseCache && hasAccess(profile)
     this.setData({
       canView,
-      showPhoneAuthDialog: !canUseCache,
+      showPhoneAuthDialog: false,
     })
     if (!canView) return
-    ;(this as any).refreshList()
+    if (canView) ;(this as any).refreshList()
   },
   onShow() {
     const { shareKey: sharedShareKey } = consumeShareParams()
@@ -252,19 +252,39 @@ Page({
     const profile = readWechatProfile()
     this.setData({
       canView: hasCachedPhone(profile) && hasAccess(profile),
-      showPhoneAuthDialog: !hasCachedPhone(profile),
+      showPhoneAuthDialog: false,
     })
   },
   onKeywordInput(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ keyword: e.detail.value || '' })
   },
   onSearchConfirm() {
+    if (!this.ensurePhoneAuth()) return
     ;(this as any).refreshList()
   },
   onSearchTap() {
+    if (!this.ensurePhoneAuth()) return
     ;(this as any).refreshList()
   },
+  promptPhoneAuth() {
+    this.setData({ showPhoneAuthDialog: true })
+  },
+  ensurePhoneAuth() {
+    const profile = readWechatProfile()
+    if (hasCachedPhone(profile)) return true
+    this.promptPhoneAuth()
+    return false
+  },
   refreshList() {
+    const profile = readWechatProfile()
+    if (!hasCachedPhone(profile)) {
+      this.setData({
+        feedLeft: [],
+        feedRight: [],
+        hasMore: false,
+      })
+      return
+    }
     this.setData({
       pageNo: 1,
       hasMore: true,
@@ -357,6 +377,7 @@ Page({
     }
   },
   onAssetTap(e: WechatMiniprogram.CustomEvent<{ id: string }>) {
+    if (!this.ensurePhoneAuth()) return
     const id = String(e.currentTarget.dataset.id || '')
     if (!id) return
     wx.navigateTo({ url: `/pages/specialassetdetail/index?id=${encodeURIComponent(id)}` })

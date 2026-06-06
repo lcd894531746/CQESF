@@ -536,13 +536,13 @@ Page({
       clearWechatLoginCache()
       this.setData({
         wechatLoginStatusText: '需要先获取手机号',
-        showPhoneAuthDialog: true,
+        showPhoneAuthDialog: false,
       })
       return
     }
 
     this.loadBasicSettings().finally(() => {
-      this.refreshByFilter()
+      if (hasWechatAccess(cachedWechatLogin)) this.refreshByFilter()
     })
   },
   onShow() {
@@ -557,7 +557,7 @@ Page({
     const tabBar = (this as any).getTabBar ? (this as any).getTabBar() : null
     if (tabBar && tabBar.setSelected) tabBar.setSelected(1)
     this.updateShareMenu()
-    this.updatePhoneAuthDialog()
+    this.updatePhoneAuthDialog(undefined, false)
   },
   buildWechatStatusText(profile: WechatLoginProfile) {
     if (profile.accessMessage) return profile.accessMessage
@@ -569,10 +569,27 @@ Page({
   hasCachedPhone(profile?: Partial<WechatLoginProfile> | null) {
     return Boolean(String(profile?.phoneNumber || profile?.matchedPerson?.phone || '').trim())
   },
-  updatePhoneAuthDialog(profile?: WechatLoginProfile) {
+  updatePhoneAuthDialog(profile?: WechatLoginProfile, forceShow = false) {
     const dataProfile = this.data.wechatLoginResult
     const currentProfile = profile || (this.hasCachedPhone(dataProfile) ? dataProfile : readWechatLoginCache())
-    this.setData({ showPhoneAuthDialog: !this.hasCachedPhone(currentProfile) })
+    if (this.hasCachedPhone(currentProfile)) {
+      if (this.data.showPhoneAuthDialog) this.setData({ showPhoneAuthDialog: false })
+      return
+    }
+    if (forceShow) this.setData({ showPhoneAuthDialog: true })
+  },
+  promptPhoneAuth(statusText = '请先授权手机号后再查询房源') {
+    this.setData({
+      wechatLoginStatusText: statusText,
+      showPhoneAuthDialog: true,
+    })
+  },
+  ensurePhoneAuth(statusText?: string) {
+    if (this.hasCachedPhone(this.data.wechatLoginResult) || this.hasCachedPhone(readWechatLoginCache())) {
+      return true
+    }
+    this.promptPhoneAuth(statusText)
+    return false
   },
   applyWechatProfile(profile: WechatLoginProfile, statusText?: string) {
     const hadAccess = hasWechatAccess(this.data.wechatLoginResult)
@@ -819,6 +836,7 @@ Page({
     this.loadMore()
   },
   onHouseTap(e: WechatMiniprogram.CustomEvent<{ id: string }>) {
+    if (!this.ensurePhoneAuth('请先授权手机号后再查看房源详情')) return
     if (!hasWechatAccess(this.data.wechatLoginResult)) {
       showNoAccessToast(this.data.wechatLoginResult.accessMessage)
       return
@@ -841,6 +859,7 @@ Page({
     })
   },
   onMapEntryTap() {
+    if (!this.ensurePhoneAuth('请先授权手机号后再使用地图找房')) return
     if (!hasWechatAccess(this.data.wechatLoginResult)) {
       showNoAccessToast(this.data.wechatLoginResult.accessMessage)
       return
@@ -883,9 +902,11 @@ Page({
     this.setData({ keyword: e.detail.value || '' })
   },
   onSearchConfirm() {
+    if (!this.ensurePhoneAuth()) return
     this.refreshByFilter()
   },
   onSearchTap() {
+    if (!this.ensurePhoneAuth()) return
     this.refreshByFilter()
   },
   onShareAppMessage() {
