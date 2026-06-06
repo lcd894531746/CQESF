@@ -178,6 +178,13 @@
   <view class="phone-auth-mask" wx:if="{{showPhoneAuthDialog}}">
     <view class="phone-auth-dialog">
       <text class="phone-auth-title">需要获取手机号</text>
+      <text class="phone-auth-desc">授权手机号前，请先阅读并同意以下协议。</text>
+      <view class="phone-auth-legal">
+        <text class="phone-auth-legal-text">点击“同意进入”即表示您已阅读并同意</text>
+        <text class="phone-auth-legal-link" data-type="agreement" catchtap="onOpenLegalDocument">《用户协议》</text>
+        <text class="phone-auth-legal-text">和</text>
+        <text class="phone-auth-legal-link" data-type="privacy" catchtap="onOpenLegalDocument">《隐私政策》</text>
+      </view>
       <view class="phone-auth-actions">
         <button class="phone-auth-btn phone-auth-cancel" bindtap="onRejectPhoneAuth">拒绝</button>
         <button class="phone-auth-btn phone-auth-confirm" open-type="getPhoneNumber" bindgetphonenumber="onBindStaffPhone">同意进入</button>

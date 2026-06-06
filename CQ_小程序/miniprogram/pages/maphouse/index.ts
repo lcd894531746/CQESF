@@ -455,7 +455,9 @@ function buildAuctionDrawerItem(row: FapaiMapHouseRow, index: number): DrawerIte
   const title = normalizeText(row.title) || normalizeText(row.communityName) || '法拍房源'
   const sourceId = row.sourceId ? String(row.sourceId) : ''
   const itemId = sourceId || (row.id ? String(row.id) : String(index + 1))
-  const image = firstImageFromValue((row as FapaiMapHouseRow & { coverPic?: string | null }).coverPic)
+  const image = cleanYinshanImageUrl(
+    firstImageFromValue((row as FapaiMapHouseRow & { coverPic?: string | null }).coverPic)
+  )
   const statusText = normalizeText(row.auctionStatusText)
   const infoList: InfoItem[] = []
   if (normalizeText(row.communityName)) infoList.push({ label: '小区', value: normalizeText(row.communityName) })

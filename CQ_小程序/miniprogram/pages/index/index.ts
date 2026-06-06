@@ -77,6 +77,8 @@ type WechatTestResult = {
   } | null
 }
 
+type LegalDocumentType = 'agreement' | 'privacy'
+
 const FALLBACK_DISTRICTS = ['不限', '大渡口', '渝中', '江北区', '渝北区', '九龙坡', '沙坪坝', '巴南', '南岸']
 const DISTRICT_ID_BY_NAME: Record<string, number> = {
   大渡口: 18048,
@@ -557,6 +559,11 @@ Page({
         wx.showToast({ title: '已拒绝授权', icon: 'none' })
       },
     })
+  },
+
+  onOpenLegalDocument(e: WechatMiniprogram.CustomEvent<{ type?: LegalDocumentType }>) {
+    const type = String(e.currentTarget.dataset.type || '').trim() as LegalDocumentType
+    wx.navigateTo({ url: type === 'privacy' ? '/pages/privacy/index' : '/pages/agreement/index' })
   },
 
   updateShareMenu() {

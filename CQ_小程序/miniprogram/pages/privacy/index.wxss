@@ -1,0 +1,45 @@
+.privacy-page {
+  height: 100vh;
+  background: #f5f7fb;
+}
+
+.privacy-card {
+  margin: 24rpx;
+  padding: 32rpx 28rpx 40rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-shadow: 0 12rpx 36rpx rgba(15, 23, 42, 0.08);
+}
+
+.privacy-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #111827;
+  line-height: 56rpx;
+}
+
+.privacy-date {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #6b7280;
+  line-height: 34rpx;
+}
+
+.privacy-section {
+  margin-top: 28rpx;
+}
+
+.privacy-section-title {
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 42rpx;
+}
+
+.privacy-text {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #374151;
+  line-height: 42rpx;
+}

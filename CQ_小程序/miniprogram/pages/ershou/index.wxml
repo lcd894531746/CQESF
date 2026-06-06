@@ -213,6 +213,12 @@
     <view class="phone-auth-dialog">
       <text class="phone-auth-title">需要先获取手机号</text>
       <text class="phone-auth-desc">低首付房源需要销售授权后查看</text>
+      <view class="phone-auth-legal">
+        <text class="phone-auth-legal-text">点击“允许”即表示您已阅读并同意</text>
+        <text class="phone-auth-legal-link" data-type="agreement" catchtap="onOpenLegalDocument">《用户协议》</text>
+        <text class="phone-auth-legal-text">和</text>
+        <text class="phone-auth-legal-link" data-type="privacy" catchtap="onOpenLegalDocument">《隐私政策》</text>
+      </view>
       <view class="phone-auth-actions">
         <button class="phone-auth-btn phone-auth-cancel" bindtap="onRejectPhoneAuth">取消</button>
         <button class="phone-auth-btn phone-auth-confirm" open-type="getPhoneNumber" bindgetphonenumber="onBindStaffPhone">允许</button>

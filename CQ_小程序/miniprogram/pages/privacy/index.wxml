@@ -1,0 +1,56 @@
+<scroll-view class="privacy-page" scroll-y>
+  <view class="privacy-card">
+    <view class="privacy-title">隐私政策</view>
+    <view class="privacy-date">更新日期：2026-06-07</view>
+
+    <view class="privacy-section">
+      <view class="privacy-section-title">一、信息收集说明</view>
+      <view class="privacy-text">为了向您提供房源浏览、房源咨询、身份识别、客户服务与账号安全保障等服务，我们可能在您使用相关功能时收集必要的用户信息。</view>
+      <view class="privacy-text">当您主动授权登录、授权手机号或使用特定功能时，我们会在获得您的明确同意后收集相应信息。</view>
+    </view>
+
+    <view class="privacy-section">
+      <view class="privacy-section-title">二、我们可能收集的信息</view>
+      <view class="privacy-text">1. 手机号码：用于识别用户身份、完成登录校验、提供受限房源查看能力及后续客户服务。</view>
+      <view class="privacy-text">2. 微信昵称、头像等公开信息：仅在您主动授权后用于完善账号资料与页面展示。</view>
+      <view class="privacy-text">3. 设备与日志信息：用于保障系统安全、排查故障、优化服务体验。</view>
+      <view class="privacy-text">4. 位置信息：仅在您使用地图找房、定位展示等相关功能并授权后使用。</view>
+    </view>
+
+    <view class="privacy-section">
+      <view class="privacy-section-title">三、信息使用方式</view>
+      <view class="privacy-text">我们收集的信息将用于：</view>
+      <view class="privacy-text">1. 提供房源查询、地图找房、详情查看等服务。</view>
+      <view class="privacy-text">2. 完成用户身份校验、客户识别与权限控制。</view>
+      <view class="privacy-text">3. 处理咨询、回访、售后及客户服务请求。</view>
+      <view class="privacy-text">4. 进行系统安全保障、异常排查与产品优化。</view>
+    </view>
+
+    <view class="privacy-section">
+      <view class="privacy-section-title">四、信息共享与披露</view>
+      <view class="privacy-text">除法律法规另有规定或取得您的明确授权外，我们不会向无关第三方出售、出租或共享您的个人信息。</view>
+      <view class="privacy-text">如为实现服务所必需，我们仅会在合法、正当、必要范围内与合作方共享，并要求其履行相应的信息保护义务。</view>
+    </view>
+
+    <view class="privacy-section">
+      <view class="privacy-section-title">五、信息存储与保护</view>
+      <view class="privacy-text">我们会采取合理的安全措施保护您的信息，防止数据被未经授权访问、公开披露、使用、修改、损坏或丢失。</view>
+      <view class="privacy-text">您的个人信息仅在实现本政策所述目的所必需的期限内保存，法律法规另有规定的除外。</view>
+    </view>
+
+    <view class="privacy-section">
+      <view class="privacy-section-title">六、您的权利</view>
+      <view class="privacy-text">您有权访问、更正、删除您的相关信息，并可撤回相应授权。撤回授权后，部分依赖该授权的功能可能无法继续使用。</view>
+    </view>
+
+    <view class="privacy-section">
+      <view class="privacy-section-title">七、政策更新</view>
+      <view class="privacy-text">当隐私政策发生变更时，我们会通过页面展示等合理方式向您告知。更新后的政策自公布之日起生效。</view>
+    </view>
+
+    <view class="privacy-section">
+      <view class="privacy-section-title">八、联系我们</view>
+      <view class="privacy-text">如您对本隐私政策有任何疑问、意见或建议，可通过平台公示的联系方式与我们联系。</view>
+    </view>
+  </view>
+</scroll-view>

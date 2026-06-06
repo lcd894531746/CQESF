@@ -3,6 +3,8 @@
     "pages/index/index",
     "pages/ershou/index",
     "pages/specialassets/index",
+    "pages/agreement/index",
+    "pages/privacy/index",
     "pages/specialassetdetail/index",
     "pages/ershoudetail/index",
     "pages/houselist/index",

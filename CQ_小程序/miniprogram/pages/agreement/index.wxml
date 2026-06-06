@@ -1,0 +1,36 @@
+<scroll-view class="agreement-page" scroll-y>
+  <view class="agreement-card">
+    <view class="agreement-title">用户协议</view>
+    <view class="agreement-date">更新日期：2026-06-07</view>
+
+    <view class="agreement-section">
+      <view class="agreement-section-title">一、协议说明</view>
+      <view class="agreement-text">本协议是您与本平台之间就小程序服务使用相关事项所订立的协议。您在使用本平台服务前，请认真阅读并充分理解本协议内容。</view>
+    </view>
+
+    <view class="agreement-section">
+      <view class="agreement-section-title">二、服务内容</view>
+      <view class="agreement-text">本平台主要为用户提供房源浏览、房源查询、地图找房、详情查看、咨询服务及相关延伸服务，具体以平台实际提供为准。</view>
+    </view>
+
+    <view class="agreement-section">
+      <view class="agreement-section-title">三、用户使用规范</view>
+      <view class="agreement-text">您在使用平台服务时，应遵守法律法规及平台规则，不得利用平台从事违法违规活动，不得干扰平台正常运行，不得恶意抓取、复制或传播平台内容。</view>
+    </view>
+
+    <view class="agreement-section">
+      <view class="agreement-section-title">四、授权与信息使用</view>
+      <view class="agreement-text">为向您提供部分服务，平台可能在您主动同意后获取手机号、头像、昵称等必要信息，并在服务范围内用于身份识别、客户服务、权限控制及安全保障。</view>
+    </view>
+
+    <view class="agreement-section">
+      <view class="agreement-section-title">五、服务变更与中断</view>
+      <view class="agreement-text">平台有权根据业务需要对服务内容、功能或规则进行调整；如因系统维护、升级、网络异常等原因导致服务中断，平台将尽力减少对您的影响。</view>
+    </view>
+
+    <view class="agreement-section">
+      <view class="agreement-section-title">六、其他</view>
+      <view class="agreement-text">您继续使用本平台服务，即视为已阅读并同意本协议全部内容。平台有权根据业务发展对本协议进行更新，并通过合理方式向您提示。</view>
+    </view>
+  </view>
+</scroll-view>

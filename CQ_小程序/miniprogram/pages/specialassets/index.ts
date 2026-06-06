@@ -19,6 +19,8 @@ type SpecialAssetItem = {
   monthlyPaymentText: string
 }
 
+type LegalDocumentType = 'agreement' | 'privacy'
+
 const DEFAULT_PAGE_SIZE = 10
 const MIN_DOWN_PAYMENT_RATIO = 0.03
 const MAX_DOWN_PAYMENT_RATIO = 0.05
@@ -320,6 +322,10 @@ Page({
         wx.showToast({ title: '已拒绝授权', icon: 'none' })
       },
     })
+  },
+  onOpenLegalDocument(e: WechatMiniprogram.CustomEvent<{ type?: LegalDocumentType }>) {
+    const type = String(e.currentTarget.dataset.type || '').trim() as LegalDocumentType
+    wx.navigateTo({ url: type === 'privacy' ? '/pages/privacy/index' : '/pages/agreement/index' })
   },
   async onBindStaffPhone(e: WechatMiniprogram.ButtonGetPhoneNumber) {
     const code = String(e.detail?.code || '').trim()

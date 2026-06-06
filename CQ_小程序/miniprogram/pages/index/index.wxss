@@ -480,6 +480,20 @@ page {
   line-height: 40rpx;
 }
 
+.phone-auth-legal {
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  line-height: 38rpx;
+}
+
+.phone-auth-legal-text {
+  color: #6b7280;
+}
+
+.phone-auth-legal-link {
+  color: #1974ff;
+}
+
 .phone-auth-actions {
   margin-top: 36rpx;
   display: flex;
