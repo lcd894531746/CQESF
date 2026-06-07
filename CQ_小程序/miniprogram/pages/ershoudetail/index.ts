@@ -1,8 +1,9 @@
-import { requestErshouDetailById } from '../../services/house'
+import { requestErshouDetailById, requestPhoneProfile } from '../../services/house'
 import { cleanYinshanImageUrls } from '../../utils/clean-image'
-import { canWechatShare, readWechatLoginCache, rememberWechatShareKey, syncWechatShareMenu } from '../../utils/wechat-access'
+import { canWechatShare, hasWechatAccess, readWechatLoginCache, rememberWechatShareKey, syncWechatShareMenu } from '../../utils/wechat-access'
 
 type ErshouDetailRow = import('../../services/house').ErshouDetailRow
+type WechatLoginData = import('../../services/house').WechatLoginData
 
 type InfoItem = {
   label: string
@@ -115,10 +116,7 @@ function canViewErshouDetail(): boolean {
   try {
     const cached = wx.getStorageSync(WECHAT_LOGIN_STORAGE_KEY)
     const source = typeof cached === 'string' ? JSON.parse(cached) : cached
-    return Boolean(
-      source?.canShareMiniProgram
-      || (source?.accessGranted && (source?.matchedPerson || source?.binding?.salesOpenid))
-    )
+    return hasWechatAccess(source)
   } catch (error) {
     console.warn('read wechat access failed:', error)
     return false
@@ -136,6 +134,35 @@ function readWechatShareKey(): string {
     console.warn('read wechat share key failed:', error)
     return ''
   }
+}
+
+function buildContactFromWechatProfile(profile?: WechatLoginData | null): { contactName: string; contactPhone: string } | null {
+  if (!profile) return null
+
+  if (canWechatShare(profile)) {
+    const contactPhone = normalizeText(profile.matchedPerson?.phone) || normalizeText(profile.phoneNumber)
+    if (!contactPhone) return null
+    return {
+      contactName: normalizeText(profile.matchedPerson?.name) || TEMP_CONTACT_NAME,
+      contactPhone,
+    }
+  }
+
+  const salesPhone = normalizeText(profile.salesPerson?.phone)
+  if (!salesPhone) return null
+  return {
+    contactName: normalizeText(profile.salesPerson?.name) || TEMP_CONTACT_NAME,
+    contactPhone: salesPhone,
+  }
+}
+
+function resolvePhoneProfileShareKey(profile?: WechatLoginData | null): string {
+  return String(
+    readWechatShareKey()
+    || profile?.share?.shareKey
+    || profile?.binding?.shareKey
+    || ''
+  ).trim()
 }
 
 function parseCoordinate(value?: string | number | null): number | null {
@@ -367,6 +394,11 @@ Page({
     try {
       const row = await requestErshouDetailById(listingId)
       const view = toView(row)
+      const contact = await this.resolveWechatContact()
+      if (contact) {
+        view.contactName = contact.contactName
+        view.contactPhone = contact.contactPhone
+      }
       this.setData({
         currentImageIndex: 0,
         house: view,
@@ -383,6 +415,22 @@ Page({
   },
   onShow() {
     syncWechatShareMenu(readWechatLoginCache())
+  },
+  async resolveWechatContact() {
+    const cachedProfile = readWechatLoginCache()
+    const phoneNumber = String(cachedProfile?.phoneNumber || cachedProfile?.matchedPerson?.phone || '').trim()
+    if (!phoneNumber) return buildContactFromWechatProfile(cachedProfile)
+
+    try {
+      const profile = await requestPhoneProfile({
+        phoneNumber,
+        shareKey: resolvePhoneProfileShareKey(cachedProfile) || undefined,
+      })
+      return buildContactFromWechatProfile(profile)
+    } catch (error) {
+      console.warn('resolve ershoudetail wechat contact failed:', error)
+      return buildContactFromWechatProfile(cachedProfile)
+    }
   },
   onSwiperChange(e: WechatMiniprogram.CustomEvent<{ current: number }>) {
     this.setData({ currentImageIndex: Number(e.detail.current || 0) })

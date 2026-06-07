@@ -141,6 +141,19 @@ function readWechatShareKey(req) {
   ).trim();
 }
 
+function readWechatRequestPhone(req) {
+  return String(
+    req.headers['x-phone-number']
+    || req.headers['x-wechat-phone']
+    || req.query?.phoneNumber
+    || req.query?.phone
+    || req.body?.phoneNumber
+    || req.body?.phone
+    || req.body?.openid
+    || ''
+  ).trim();
+}
+
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, uploadAbsoluteDir),
   filename: (_, file, cb) => {
@@ -349,6 +362,18 @@ async function allowAdminOrShareAccess(req, res, next) {
     const staff = await findSystemStaffById(pool, tokenPayload.id);
     if (staff && staff.phone === tokenPayload.phone && isSystemStaff(staff)) {
       req.adminUser = sanitizeSystemStaffForAdmin(staff);
+      return next();
+    }
+  }
+
+  const requestPhone = readWechatRequestPhone(req);
+  if (requestPhone) {
+    const staff = await findSystemStaffByPhone(pool, requestPhone);
+    if (staff && isSystemStaff(staff)) {
+      req.wechatMiniProgramUser = {
+        phoneNumber: requestPhone,
+        matchedPerson: sanitizePersonRow(staff),
+      };
       return next();
     }
   }

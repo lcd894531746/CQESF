@@ -1,7 +1,8 @@
-import { requestSpecialAssetDetail } from '../../services/house'
-import { rememberWechatShareKey } from '../../utils/wechat-access'
+import { requestPhoneProfile, requestSpecialAssetDetail } from '../../services/house'
+import { canWechatShare, hasWechatAccess, readWechatLoginCache, readWechatAccessShareKey, rememberWechatShareKey } from '../../utils/wechat-access'
 
 type SpecialAssetRow = import('../../services/house').SpecialAssetRow
+type WechatLoginData = import('../../services/house').WechatLoginData
 
 type InfoItem = { label: string; value: string }
 
@@ -33,10 +34,7 @@ function canViewDetail(): boolean {
   try {
     const cached = wx.getStorageSync(WECHAT_LOGIN_STORAGE_KEY)
     const source = typeof cached === 'string' ? JSON.parse(cached) : cached
-    return Boolean(
-      source?.canShareMiniProgram
-      || (source?.accessGranted && (source?.matchedPerson || source?.binding?.salesOpenid))
-    )
+    return hasWechatAccess(source)
   } catch (error) {
     console.warn('read wechat access failed:', error)
     return false
@@ -145,6 +143,35 @@ function toView(row: SpecialAssetRow): SpecialAssetDetailView {
   }
 }
 
+function buildContactFromWechatProfile(profile?: WechatLoginData | null): { contactName: string; contactPhone: string } | null {
+  if (!profile) return null
+
+  if (canWechatShare(profile)) {
+    const contactPhone = normalizeText(profile.matchedPerson?.phone) || normalizeText(profile.phoneNumber)
+    if (!contactPhone) return null
+    return {
+      contactName: normalizeText(profile.matchedPerson?.name) || '资产顾问',
+      contactPhone,
+    }
+  }
+
+  const salesPhone = normalizeText(profile.salesPerson?.phone)
+  if (!salesPhone) return null
+  return {
+    contactName: normalizeText(profile.salesPerson?.name) || '资产顾问',
+    contactPhone: salesPhone,
+  }
+}
+
+function resolvePhoneProfileShareKey(profile?: WechatLoginData | null): string {
+  return String(
+    readWechatAccessShareKey()
+    || profile?.share?.shareKey
+    || profile?.binding?.shareKey
+    || ''
+  ).trim()
+}
+
 Page({
   data: {
     currentImageIndex: 0,
@@ -188,12 +215,33 @@ Page({
     try {
       const row = await requestSpecialAssetDetail(id)
       const view = toView(row)
+      const contact = await this.resolveWechatContact()
+      if (contact) {
+        view.contactName = contact.contactName
+        view.contactPhone = contact.contactPhone
+      }
       this.setData({ asset: view })
       wx.setNavigationBarTitle({ title: view.title || '特殊资产详情' })
     } catch (error) {
       console.error('special asset detail request failed:', error)
       wx.showToast({ title: '详情加载失败', icon: 'none' })
       setTimeout(() => wx.navigateBack({ delta: 1 }), 600)
+    }
+  },
+  async resolveWechatContact() {
+    const cachedProfile = readWechatLoginCache()
+    const phoneNumber = String(cachedProfile?.phoneNumber || cachedProfile?.matchedPerson?.phone || '').trim()
+    if (!phoneNumber) return buildContactFromWechatProfile(cachedProfile)
+
+    try {
+      const profile = await requestPhoneProfile({
+        phoneNumber,
+        shareKey: resolvePhoneProfileShareKey(cachedProfile) || undefined,
+      })
+      return buildContactFromWechatProfile(profile)
+    } catch (error) {
+      console.warn('resolve specialassetdetail wechat contact failed:', error)
+      return buildContactFromWechatProfile(cachedProfile)
     }
   },
   onSwiperChange(e: WechatMiniprogram.CustomEvent<{ current: number }>) {

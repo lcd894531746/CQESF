@@ -1,4 +1,4 @@
-import { requestBindSalesOpenid, requestBindStaffPhone, requestSpecialAssets } from '../../services/house'
+import { requestBindSalesOpenid, requestBindStaffPhone, requestPhoneProfile, requestSpecialAssets } from '../../services/house'
 import { consumeShareParams } from '../../utils/wechat-access'
 
 type SpecialAssetRow = import('../../services/house').SpecialAssetRow
@@ -210,6 +210,21 @@ Page({
     saveWechatProfile(boundProfile)
     return boundProfile
   },
+  async refreshWechatProfile(profile: WechatLoginData) {
+    const currentPhone = String(profile.phoneNumber || profile.openid || '').trim()
+    if (!currentPhone) return profile
+    try {
+      const refreshedProfile = await requestPhoneProfile({
+        phoneNumber: currentPhone,
+        shareKey: String(this.data.sharedShareKey || '').trim() || undefined,
+      })
+      saveWechatProfile(refreshedProfile)
+      return refreshedProfile
+    } catch (error) {
+      console.warn('refresh wechat profile failed:', error)
+      return profile
+    }
+  },
   onLoad() {
     const routeOptions = getRouteOptions()
     const { shareKey: sharedShareKey } = consumeShareParams(routeOptions)
@@ -219,7 +234,7 @@ Page({
     const canUseCache = hasCachedPhone(profile)
     if (!canUseCache) clearWechatProfile()
     if (canUseCache && profile) {
-      void this.bindSalesOpenidIfNeeded(profile).then((nextProfile) => {
+      void this.refreshWechatProfile(profile).then((refreshedProfile) => this.bindSalesOpenidIfNeeded(refreshedProfile)).then((nextProfile) => {
         const canView = hasAccess(nextProfile)
         this.setData({ canView, showPhoneAuthDialog: false })
         if (canView) ;(this as any).refreshList()
@@ -239,7 +254,7 @@ Page({
       this.setData({ sharedShareKey })
       const profile = readWechatProfile()
       if (hasCachedPhone(profile) && profile) {
-        void this.bindSalesOpenidIfNeeded(profile).then((nextProfile) => {
+        void this.refreshWechatProfile(profile).then((refreshedProfile) => this.bindSalesOpenidIfNeeded(refreshedProfile)).then((nextProfile) => {
           this.setData({
             canView: hasAccess(nextProfile),
             showPhoneAuthDialog: false,

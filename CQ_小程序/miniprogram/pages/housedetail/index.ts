@@ -1,8 +1,9 @@
-import { requestHouseDetail } from '../../services/house'
+import { requestHouseDetail, requestPhoneProfile } from '../../services/house'
 import { cleanYinshanImageUrls } from '../../utils/clean-image'
-import { canWechatShare, readWechatLoginCache, syncWechatShareMenu } from '../../utils/wechat-access'
+import { canWechatShare, hasWechatAccess, readWechatLoginCache, syncWechatShareMenu } from '../../utils/wechat-access'
 
 type HouseDetailRow = import('../../services/house').HouseDetailRow
+type WechatLoginData = import('../../services/house').WechatLoginData
 
 type InfoItem = {
   label: string
@@ -75,6 +76,33 @@ function formatNumberText(value?: number | null, unit = ''): string {
   return `${Number.isInteger(num) ? num : num.toFixed(2)}${unit}`
 }
 
+function padTimePart(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+function formatAuctionTime(value?: string | null): string {
+  const text = normalizeText(value)
+  if (!text) return ''
+
+  const normalized = text.replace(' ', 'T')
+  const parsed = new Date(normalized)
+  if (!Number.isFinite(parsed.getTime())) return text
+
+  return [
+    parsed.getFullYear(),
+    '-',
+    padTimePart(parsed.getMonth() + 1),
+    '-',
+    padTimePart(parsed.getDate()),
+    ' ',
+    padTimePart(parsed.getHours()),
+    ':',
+    padTimePart(parsed.getMinutes()),
+    ':',
+    padTimePart(parsed.getSeconds()),
+  ].join('')
+}
+
 function guessDecorationText(code?: string | null): string {
   if (!code) return '未知'
   if (code === '1') return '简装'
@@ -115,7 +143,7 @@ function buildInfoList(row: HouseDetailRow, showInternalFields: boolean): InfoIt
   const floorLevel = normalizeText(row.floorLevel)
   const buildYear = normalizeText(row.buildYear)
   const platform = normalizeText(row.platform)
-  const auctionTime = normalizeText(row.auctionTime)
+  const auctionTime = formatAuctionTime(row.auctionTime)
 
   if (communityName) list.push({ label: '小区', value: communityName })
   list.push({ label: '楼层', value: floorLevel || '未知' })
@@ -160,6 +188,7 @@ function toDetailHouse(row: HouseDetailRow): DetailHouse {
     infoList: buildInfoList(row, canViewInternalFields()),
     auctionHint: row.auctionTime ? `预计开拍：${row.auctionTime}` : '开拍时间待确认',
     externalLink: normalizeText(row.jumpLink),
+    auctionHint: formatAuctionTime(row.auctionTime) ? `预计开拍：${formatAuctionTime(row.auctionTime)}` : '开拍时间待确认',
     contactName,
     contactPhone,
     contactAvatar,
@@ -169,14 +198,31 @@ function toDetailHouse(row: HouseDetailRow): DetailHouse {
   }
 }
 
+function buildContactFromWechatProfile(profile?: WechatLoginData | null): { contactName: string; contactPhone: string } | null {
+  if (!profile) return null
+
+  if (canWechatShare(profile)) {
+    const contactPhone = normalizeText(profile.matchedPerson?.phone) || normalizeText(profile.phoneNumber)
+    if (!contactPhone) return null
+    return {
+      contactName: normalizeText(profile.matchedPerson?.name) || '资产顾问',
+      contactPhone,
+    }
+  }
+
+  const salesPhone = normalizeText(profile.salesPerson?.phone)
+  if (!salesPhone) return null
+  return {
+    contactName: normalizeText(profile.salesPerson?.name) || '资产顾问',
+    contactPhone: salesPhone,
+  }
+}
+
 function canViewHouseDetail(): boolean {
   try {
     const cached = wx.getStorageSync(WECHAT_LOGIN_STORAGE_KEY)
     const source = typeof cached === 'string' ? JSON.parse(cached) : cached
-    return Boolean(
-      source?.canShareMiniProgram
-      || (source?.accessGranted && (source?.matchedPerson || source?.binding?.salesOpenid))
-    )
+    return hasWechatAccess(source)
   } catch (error) {
     console.warn('read wechat access failed:', error)
     return false
@@ -194,6 +240,15 @@ function readWechatShareKey(): string {
     console.warn('read wechat share key failed:', error)
     return ''
   }
+}
+
+function resolvePhoneProfileShareKey(profile?: WechatLoginData | null): string {
+  return String(
+    readWechatShareKey()
+    || profile?.share?.shareKey
+    || profile?.binding?.shareKey
+    || ''
+  ).trim()
 }
 
 Page({
@@ -244,12 +299,36 @@ Page({
   onShow() {
     syncWechatShareMenu(readWechatLoginCache())
   },
+  async resolveWechatContact(sourceId?: number) {
+    if (!sourceId) return null
+
+    const cachedProfile = readWechatLoginCache()
+    const phoneNumber = String(cachedProfile?.phoneNumber || cachedProfile?.matchedPerson?.phone || '').trim()
+    if (!phoneNumber) return buildContactFromWechatProfile(cachedProfile)
+
+    try {
+      const profile = await requestPhoneProfile({
+        phoneNumber,
+        shareKey: resolvePhoneProfileShareKey(cachedProfile) || undefined,
+      })
+      return buildContactFromWechatProfile(profile)
+    } catch (error) {
+      console.warn('resolve housedetail wechat contact failed:', error)
+      return buildContactFromWechatProfile(cachedProfile)
+    }
+  },
   async loadDetail(id: number, sourceId?: number) {
     try {
       const row = await requestHouseDetail(id || sourceId || 0, sourceId ? { sourceId } : undefined)
+      const house = toDetailHouse(row)
+      const contact = await this.resolveWechatContact(sourceId)
+      if (contact) {
+        house.contactName = contact.contactName
+        house.contactPhone = contact.contactPhone
+      }
       this.setData({
         currentImageIndex: 0,
-        house: toDetailHouse(row),
+        house,
       })
       wx.setNavigationBarTitle({
         title: normalizeText(row.communityName) || '房源详情',

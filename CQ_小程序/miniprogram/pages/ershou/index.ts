@@ -6,6 +6,7 @@ import {
   requestBindStaffPhone,
   requestCreateWechatShare,
   requestErshouListings,
+  requestPhoneProfile,
 } from '../../services/house'
 import { cleanYinshanImageUrl, cleanYinshanImageUrls } from '../../utils/clean-image'
 
@@ -531,7 +532,9 @@ Page({
     const cachedWechatLogin = readWechatLoginCache()
     if (cachedWechatLogin && this.hasCachedPhone(cachedWechatLogin)) {
       this.applyWechatProfile(cachedWechatLogin, '已读取缓存身份')
-      void this.bindSalesOpenidIfNeeded(cachedWechatLogin)
+      void this.refreshWechatProfile(cachedWechatLogin).then((nextProfile) => {
+        void this.bindSalesOpenidIfNeeded(nextProfile)
+      })
     } else {
       clearWechatLoginCache()
       this.setData({
@@ -551,7 +554,9 @@ Page({
       this.setData({ sharedShareKey })
       const profile = this.data.wechatLoginResult
       if (this.hasCachedPhone(profile)) {
-        void this.bindSalesOpenidIfNeeded(profile)
+        void this.refreshWechatProfile(profile).then((nextProfile) => {
+          void this.bindSalesOpenidIfNeeded(nextProfile)
+        })
       }
     }
     const tabBar = (this as any).getTabBar ? (this as any).getTabBar() : null
@@ -628,6 +633,21 @@ Page({
         hasMore: false,
         isLoadingMore: false,
       })
+    }
+  },
+  async refreshWechatProfile(profile: WechatLoginProfile) {
+    const currentPhone = String(profile.phoneNumber || profile.openid || '').trim()
+    if (!currentPhone) return profile
+    try {
+      const refreshedProfile = await requestPhoneProfile({
+        phoneNumber: currentPhone,
+        shareKey: String(this.data.sharedShareKey || '').trim() || undefined,
+      })
+      this.applyWechatProfile(refreshedProfile, this.buildWechatStatusText(refreshedProfile))
+      return refreshedProfile
+    } catch (error) {
+      console.warn('refresh wechat profile failed:', error)
+      return profile
     }
   },
   async bindSalesOpenidIfNeeded(profile: WechatLoginProfile) {

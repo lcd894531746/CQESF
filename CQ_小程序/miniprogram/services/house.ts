@@ -1,4 +1,4 @@
-import { readWechatAccessShareKey } from '../utils/wechat-access'
+import { readWechatAccessShareKey, readWechatLoginCache } from '../utils/wechat-access'
 
 export type HouseListQuery = {
   pageNum: number
@@ -83,7 +83,11 @@ function withWechatShareKey<T extends Record<string, unknown>>(data?: T): T & { 
 
 function wechatShareHeader(): Record<string, string> {
   const shareKey = readWechatAccessShareKey()
-  return shareKey ? { 'x-share-key': shareKey } : {}
+  const phoneNumber = String(readWechatLoginCache()?.phoneNumber || '').trim()
+  const header: Record<string, string> = {}
+  if (shareKey) header['x-share-key'] = shareKey
+  if (phoneNumber) header['x-phone-number'] = phoneNumber
+  return header
 }
 
 // ------- Detail API types -------
