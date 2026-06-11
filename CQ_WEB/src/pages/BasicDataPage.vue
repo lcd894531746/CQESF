@@ -16,6 +16,7 @@ const defaultFormState = {
   interest_rate: '3.15',
   fapai_intro: '',
   low_down_payment_intro: '',
+  mini_program_access_mode: 'strict',
 }
 
 const form = reactive({
@@ -46,6 +47,7 @@ function fillForm(settings = {}) {
   form.interest_rate = String(settings.interest_rate ?? defaultFormState.interest_rate)
   form.fapai_intro = String(settings.fapai_intro ?? defaultFormState.fapai_intro)
   form.low_down_payment_intro = String(settings.low_down_payment_intro ?? defaultFormState.low_down_payment_intro)
+  form.mini_program_access_mode = String(settings.mini_program_access_mode ?? defaultFormState.mini_program_access_mode)
 }
 
 function buildPayload() {
@@ -55,6 +57,7 @@ function buildPayload() {
     interest_rate: Number(form.interest_rate),
     fapai_intro: form.fapai_intro.trim(),
     low_down_payment_intro: form.low_down_payment_intro.trim(),
+    mini_program_access_mode: String(form.mini_program_access_mode || 'strict').trim().toLowerCase() === 'public' ? 'public' : 'strict',
   }
 }
 
@@ -73,6 +76,10 @@ function validatePayload(payload) {
 
   if (payload.min_house_price > payload.max_house_price) {
     return '最低房屋价格不能大于最高房屋价格'
+  }
+
+  if (!['strict', 'public'].includes(String(payload.mini_program_access_mode || ''))) {
+    return '小程序访问模式配置不正确'
   }
 
   return ''
@@ -169,6 +176,23 @@ onMounted(async () => {
             </div>
           </div>
 
+          <div class="field-group compact-field-group">
+            <div>
+              <h3>小程序访问模式</h3>
+              <p class="field-hint">`strict` 需要手机号或销售分享；`public` 公开展示正式内容，适合提审期间使用。</p>
+            </div>
+            <div class="mode-options">
+              <label class="mode-option">
+                <input v-model="form.mini_program_access_mode" type="radio" value="strict" />
+                <span>严格模式</span>
+              </label>
+              <label class="mode-option">
+                <input v-model="form.mini_program_access_mode" type="radio" value="public" />
+                <span>公开浏览模式</span>
+              </label>
+            </div>
+          </div>
+
           <div class="intro-grid">
             <div class="field-group intro-field-group">
               <h3>法拍房简介</h3>
@@ -212,3 +236,23 @@ onMounted(async () => {
     </section>
   </div>
 </template>
+
+<style scoped>
+.mode-options {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.mode-option input {
+  margin: 0;
+}
+</style>

@@ -32,15 +32,6 @@ function toBoolean(value, fallback = false) {
 function buildOrderByClause(filters = {}) {
   return `
     ORDER BY
-      CASE
-        WHEN TRIM(COALESCE(h.building_year, '')) REGEXP '^[0-9]{4}' THEN 1
-        ELSE 0
-      END DESC,
-      CASE
-        WHEN TRIM(COALESCE(h.building_year, '')) REGEXP '^[0-9]{4}'
-          THEN CAST(LEFT(TRIM(h.building_year), 4) AS UNSIGNED)
-        ELSE 0
-      END DESC,
       h.created_at DESC,
       h.id DESC
   `;

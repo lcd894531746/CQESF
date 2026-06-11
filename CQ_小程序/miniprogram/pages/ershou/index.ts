@@ -271,7 +271,11 @@ function isCreatedToday(value?: string | null): boolean {
   if (!text) return false
   const parsed = new Date(text)
   if (Number.isNaN(parsed.getTime())) return false
-  return isSameLocalDate(parsed, new Date())
+  const now = new Date()
+  const createdDay = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+  const currentDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diffDays = Math.round((currentDay.getTime() - createdDay.getTime()) / (24 * 60 * 60 * 1000))
+  return diffDays >= 0 && diffDays <= 1
 }
 
 function normalizeDistrictName(value?: string | null): string {
@@ -549,10 +553,27 @@ Page({
     })
   },
   onShow() {
+    const cachedWechatLogin = readWechatLoginCache()
+    const currentHasAccess = hasWechatAccess(this.data.wechatLoginResult)
+    if (cachedWechatLogin && this.hasCachedPhone(cachedWechatLogin)) {
+      this.applyWechatProfile(cachedWechatLogin, this.buildWechatStatusText(cachedWechatLogin))
+      if (
+        currentHasAccess
+        && hasWechatAccess(cachedWechatLogin)
+        && !this.data.isLoadingMore
+        && !this.data.emptyResultText
+        && this.data.feedLeft.length === 0
+        && this.data.feedRight.length === 0
+      ) {
+        this.refreshByFilter()
+      }
+    }
     const { shareKey: sharedShareKey } = consumeShareParams()
     if (sharedShareKey) {
       this.setData({ sharedShareKey })
-      const profile = this.data.wechatLoginResult
+      const profile = cachedWechatLogin && this.hasCachedPhone(cachedWechatLogin)
+        ? cachedWechatLogin
+        : this.data.wechatLoginResult
       if (this.hasCachedPhone(profile)) {
         void this.refreshWechatProfile(profile).then((nextProfile) => {
           void this.bindSalesOpenidIfNeeded(nextProfile)

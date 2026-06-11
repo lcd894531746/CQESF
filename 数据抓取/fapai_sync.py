@@ -174,6 +174,7 @@ CREATE TABLE IF NOT EXISTS `{table_name}` (
   data_process_memo VARCHAR(255) NOT NULL DEFAULT '',
   end_date VARCHAR(64) NOT NULL DEFAULT '',
   report_create_time DATETIME NULL,
+  source_up_time DATETIME NULL,
   create_time DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -237,6 +238,7 @@ ADD_COLUMN_DEFINITIONS = {
     "hpf_cover_pic": "ADD COLUMN `hpf_cover_pic` LONGTEXT NULL AFTER `background_pic`",
     "hpf_detail_pic": "ADD COLUMN `hpf_detail_pic` LONGTEXT NULL AFTER `hpf_cover_pic`",
     "hpf_background_pic": "ADD COLUMN `hpf_background_pic` LONGTEXT NULL AFTER `hpf_detail_pic`",
+    "source_up_time": "ADD COLUMN `source_up_time` DATETIME NULL AFTER `report_create_time`",
 }
 
 INSERT_COLUMNS = [
@@ -311,6 +313,7 @@ INSERT_COLUMNS = [
     "data_process_memo",
     "end_date",
     "report_create_time",
+    "source_up_time",
     "create_time",
 ]
 
@@ -385,6 +388,13 @@ def normalize_datetime(value) -> Optional[str]:
 def normalize_date(value) -> Optional[str]:
     dt = normalize_datetime(value)
     return dt[:10] if dt else None
+
+
+def normalize_source_up_time(row: dict) -> Optional[str]:
+    return (
+        normalize_datetime(row.get("upTime"))
+        or normalize_datetime(row.get("createTime"))
+    )
 
 
 def parse_location(value) -> Tuple[Optional[float], Optional[float]]:
@@ -691,6 +701,8 @@ def normalize_row(row: dict, city_name: str, district_map: Dict[int, dict]) -> O
 
     room_count, hall_count, bath_count = parse_layout(trim_text(row.get("layout")))
 
+    source_up_time = normalize_source_up_time(row)
+
     return {
         "source_id": source_id,
         "city_name": city_name,
@@ -763,7 +775,8 @@ def normalize_row(row: dict, city_name: str, district_map: Dict[int, dict]) -> O
         "data_process_memo": trim_text(row.get("dataProcessMemo")),
         "end_date": trim_text(row.get("endDate")),
         "report_create_time": normalize_datetime(row.get("reportCreateTime")),
-        "create_time": normalize_datetime(row.get("createTime")),
+        "source_up_time": source_up_time,
+        "create_time": source_up_time,
     }
 
 

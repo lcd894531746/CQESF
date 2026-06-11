@@ -164,6 +164,33 @@ function trimText(value) {
   return String(value || '').trim();
 }
 
+function normalizeSourceDateTime(value) {
+  const raw = trimText(value);
+  if (!raw) return null;
+  const normalized = raw.replace(/\//g, '-');
+  const matched = normalized.match(
+    /^(\d{4}-\d{2}-\d{2})(?:[T\s]+(\d{2}:\d{2}:\d{2})(?:\.\d{1,3})?(?:Z|[+-]\d{2}:?\d{2})?)?$/
+  );
+  if (matched) {
+    return `${matched[1]} ${matched[2] || '00:00:00'}`;
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  return formatter.format(parsed);
+}
+
 function isTargetDistrict(areaCode, areaName) {
   const normalizedAreaCode = trimText(areaCode);
   const normalizedAreaName = trimText(areaName);
@@ -351,7 +378,8 @@ function normalizeHouseRow(row = {}, subArea = {}) {
       districtName: row.districtname,
     }),
     detailHtml: null,
-    sourceUpdatedHint: trimText(row.lastdate || row.upTime || ''),
+    sourceUpdatedHint: trimText(row.upTime || ''),
+    sourceUpTime: normalizeSourceDateTime(row.upTime || ''),
     followTotal: toInt(row.followTotal),
     takeLookTotal: toInt(row.takeLookTotal),
   };
@@ -912,6 +940,7 @@ async function replaceCommunitiesAndHouses(connection, communities = []) {
     community.houses.forEach((house) => {
       if (!house.listingId || deletedListingIds.has(house.listingId)) return;
       freshListingIds.add(house.listingId);
+      const effectiveCreatedAt = house.sourceUpTime || getChinaDateTimeString();
       houseRows.push([
         house.listingId,
         house.title,
@@ -942,7 +971,8 @@ async function replaceCommunitiesAndHouses(connection, communities = []) {
         house.coverImageUrl,
         house.imageUrlsJson,
         house.communityInfoJson,
-        getChinaDateTimeString(),
+        house.sourceUpTime,
+        effectiveCreatedAt,
       ]);
     });
   });
@@ -1023,6 +1053,7 @@ async function replaceCommunitiesAndHouses(connection, communities = []) {
           cover_image_url,
           image_urls_json,
           community_info_json,
+          source_up_time,
           created_at
         ) VALUES ?
         ON DUPLICATE KEY UPDATE
@@ -1054,6 +1085,7 @@ async function replaceCommunitiesAndHouses(connection, communities = []) {
           cover_image_url = VALUES(cover_image_url),
           image_urls_json = VALUES(image_urls_json),
           community_info_json = VALUES(community_info_json),
+          source_up_time = VALUES(source_up_time),
           created_at = VALUES(created_at)
       `,
       houseRows,

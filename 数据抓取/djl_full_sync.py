@@ -213,6 +213,7 @@ class HouseRow:
     cover_image_url: str
     image_urls_json: str
     community_info_json: str
+    created_at: Optional[str]
 
 
 @dataclass
@@ -291,6 +292,26 @@ def decimal_from_text(value: str) -> Optional[float]:
         return float(Decimal(raw))
     except (InvalidOperation, ValueError):
         return None
+
+
+def normalize_source_datetime(value) -> Optional[str]:
+    raw = trim_text(value)
+    if not raw:
+        return None
+
+    normalized = raw.replace("/", "-")
+    matched = re.match(
+        r"^(\d{4}-\d{2}-\d{2})(?:[T\s]+(\d{2}:\d{2}:\d{2})(?:\.\d{1,3})?(?:Z|[+-]\d{2}:?\d{2})?)?$",
+        normalized,
+    )
+    if matched:
+        return f"{matched.group(1)} {matched.group(2) or '00:00:00'}"
+
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def parse_position(item: dict) -> Tuple[Optional[float], Optional[float]]:
@@ -626,6 +647,7 @@ def normalize_house_row(row: dict, sub_area: SubAreaRow) -> Optional[HouseRow]:
             },
             ensure_ascii=False,
         ),
+        created_at=normalize_source_datetime(row.get("upTime")),
     )
 
 
@@ -1086,7 +1108,7 @@ def upsert_sync(connection, districts: List[DistrictRow], sub_areas: List[SubAre
                     house.cover_image_url,
                     house.image_urls_json,
                     house.community_info_json,
-                    get_china_datetime_string(),
+                    house.created_at,
                 ),
             )
 

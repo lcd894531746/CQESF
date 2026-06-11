@@ -48,12 +48,23 @@ type HouseListResponse = {
   }
 }
 
+type FapaiHouseListResponse = {
+  ok?: boolean
+  result?: {
+    page?: number
+    pageSize?: number
+    total?: number
+    totalPages?: number
+    items?: HouseListRow[]
+  }
+}
+
 // ------- API endpoints -------
-const HOUSE_LIST_API = 'https://api.ysfp.com.cn/api/house/index/list'
-const HOUSE_TYPE_LIST_API = 'https://api.ysfp.com.cn/api/house/type/list'
-const HOUSE_DETAIL_API = 'https://api.ysfp.com.cn/api/house/detail'
 // const BK_API_BASE_URL = 'http://152.136.108.55:9080'
 const BK_API_BASE_URL = 'https://shanlan.xyz'
+const HOUSE_LIST_API = `${BK_API_BASE_URL}/api/fapai-houses`
+const HOUSE_TYPE_LIST_API = `${BK_API_BASE_URL}/api/fapai-houses`
+const HOUSE_DETAIL_API = 'https://api.ysfp.com.cn/api/house/detail'
 const ERSHOU_LIST_API = `${BK_API_BASE_URL}/api/bk/ershou/list`
 const ERSHOU_DETAIL_API = `${BK_API_BASE_URL}/api/bk/ershou/details/item`
 const BK_MAP_BUBBLES_API = `${BK_API_BASE_URL}/api/bk/map/bubbles`
@@ -231,6 +242,7 @@ export type BasicSettingsData = {
   interest_rate?: number
   fapai_intro?: string
   low_down_payment_intro?: string
+  mini_program_access_mode?: 'strict' | 'public' | string
   updated_at?: string
 }
 
@@ -797,21 +809,20 @@ export function requestHouseList(query: HouseListQuery): Promise<{ rows: HouseLi
     wx.request({
       url: HOUSE_LIST_API,
       method: 'GET',
-      data: query,
+      header: wechatShareHeader(),
+      data: withWechatShareKey(query as unknown as Record<string, unknown>),
       success: (res) => {
-        const responseData = (res.data || {}) as HouseListResponse
-        if (responseData.code !== 200) {
+        const responseData = (res.data || {}) as FapaiHouseListResponse
+        if (!responseData.ok || !responseData.result) {
           reject(new Error('API_CODE_ERROR'))
           return
         }
         resolve({
-          rows: (responseData.data && responseData.data.rows) || [],
-          total: Number((responseData.data && responseData.data.total) || 0),
+          rows: responseData.result.items || [],
+          total: Number(responseData.result.total || 0),
         })
       },
-      fail: () => {
-        reject(new Error('NETWORK_FAIL'))
-      },
+      fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
     })
   })
 }
@@ -821,19 +832,20 @@ export function requestHouseTypeList(query: Partial<HouseListQuery>): Promise<{ 
     wx.request({
       url: HOUSE_TYPE_LIST_API,
       method: 'GET',
-      data: query,
+      header: wechatShareHeader(),
+      data: withWechatShareKey(query as unknown as Record<string, unknown>),
       success: (res) => {
-        const responseData = (res.data || {}) as HouseListResponse
-        if (responseData.code !== 200) {
+        const responseData = (res.data || {}) as FapaiHouseListResponse
+        if (!responseData.ok || !responseData.result) {
           reject(new Error('API_CODE_ERROR'))
           return
         }
         resolve({
-          rows: (responseData.data && responseData.data.rows) || [],
-          total: Number((responseData.data && responseData.data.total) || 0),
+          rows: responseData.result.items || [],
+          total: Number(responseData.result.total || 0),
         })
       },
-      fail: () => reject(new Error('NETWORK_FAIL')),
+      fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
     })
   })
 }

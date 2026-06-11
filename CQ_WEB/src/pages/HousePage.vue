@@ -369,11 +369,10 @@ function isTodayNewHouse(house) {
   const createdAt = new Date(raw)
   if (Number.isNaN(createdAt.getTime())) return false
   const now = new Date()
-  return (
-    createdAt.getFullYear() === now.getFullYear() &&
-    createdAt.getMonth() === now.getMonth() &&
-    createdAt.getDate() === now.getDate()
-  )
+  const createdDay = new Date(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate())
+  const currentDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diffDays = Math.round((currentDay.getTime() - createdDay.getTime()) / (24 * 60 * 60 * 1000))
+  return diffDays >= 0 && diffDays <= 1
 }
 
 function normalizeImageUrl(url) {

@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS basic_settings (
   interest_rate DECIMAL(6, 2) NOT NULL DEFAULT 3.15,
   fapai_intro TEXT NULL,
   low_down_payment_intro TEXT NULL,
+  mini_program_access_mode VARCHAR(16) NOT NULL DEFAULT 'strict',
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )
 `;
@@ -204,8 +205,8 @@ async function renameTableIfNeeded(connection, legacyTableName, nextTableName) {
 
 async function seedBasicSettings(connection) {
   await connection.query(`
-    INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate)
-    VALUES (1, 0, 150, 3.15)
+    INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate, mini_program_access_mode)
+    VALUES (1, 0, 150, 3.15, 'strict')
     ON DUPLICATE KEY UPDATE id = id
   `);
 
@@ -329,6 +330,10 @@ async function synchronizeBasicSettingsSchema(connection) {
 
   if (!columnNames.has('low_down_payment_intro')) {
     alters.push('ADD COLUMN `low_down_payment_intro` TEXT NULL AFTER `fapai_intro`');
+  }
+
+  if (!columnNames.has('mini_program_access_mode')) {
+    alters.push("ADD COLUMN `mini_program_access_mode` VARCHAR(16) NOT NULL DEFAULT 'strict' AFTER `low_down_payment_intro`");
   }
 
   if (columnNames.has('house_price')) {
@@ -587,8 +592,12 @@ async function synchronizeDjlHouseDetailSchema(connection) {
     alters.push('ADD COLUMN `manual_gallery_images_json` JSON NULL AFTER `image_urls_json`');
   }
 
+  if (!columnNames.has('source_up_time')) {
+    alters.push('ADD COLUMN `source_up_time` DATETIME NULL AFTER `manual_gallery_images_json`');
+  }
+
   if (!columnNames.has('is_deleted')) {
-    alters.push('ADD COLUMN `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 AFTER `manual_gallery_images_json`');
+    alters.push('ADD COLUMN `is_deleted` TINYINT(1) NOT NULL DEFAULT 0 AFTER `source_up_time`');
   }
 
   if (!columnNames.has('deleted_at')) {
@@ -597,6 +606,18 @@ async function synchronizeDjlHouseDetailSchema(connection) {
 
   if (!columnNames.has('delete_reason')) {
     alters.push("ADD COLUMN `delete_reason` VARCHAR(255) DEFAULT '' AFTER `deleted_at`");
+  }
+
+  const createdAtColumn = columns.find((column) => column.Field === 'created_at');
+  if (createdAtColumn) {
+    const createdAtType = String(createdAtColumn.Type || '').toLowerCase();
+    const createdAtNullable = String(createdAtColumn.Null || '').toUpperCase() === 'YES';
+    const createdAtDefault = createdAtColumn.Default;
+    const needsCreatedAtAlter = createdAtType === 'timestamp'
+      && (!createdAtNullable || createdAtDefault !== null);
+    if (needsCreatedAtAlter) {
+      alters.push('MODIFY COLUMN `created_at` TIMESTAMP NULL DEFAULT NULL');
+    }
   }
 
   [

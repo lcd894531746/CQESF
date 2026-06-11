@@ -100,7 +100,7 @@
   </view>
   <scroll-view class="list-scroll" scroll-y lower-threshold="120" bindscrolltolower="onLoadMore">
     <view class="content list-content">
-      <view class="waterfall">
+      <view class="waterfall" wx:if="{{feedLeft.length || feedRight.length}}">
       <view class="left-col">
         <block wx:for="{{feedLeft}}" wx:key="id">
           <view class="house-card" data-id="{{item.id}}" data-sourceid="{{item.sourceId}}" bindtap="onHouseTap">
@@ -171,6 +171,10 @@
           </view>
         </block>
       </view>
+      </view>
+      <view class="empty-state" wx:elif="{{!isLoadingMore && wechatTestResult.accessGranted}}">
+        <text class="empty-state-title">暂无数据</text>
+        <text class="empty-state-desc">换个筛选条件试试，或稍后再来看</text>
       </view>
       <view class="load-more-tip" wx:if="{{(wechatTestResult.canShareMiniProgram || (wechatTestResult.accessGranted && (wechatTestResult.matchedPerson || (wechatTestResult.binding && wechatTestResult.binding.salesOpenid)))) && !hasMore}}">没有更多了</view>
     </view>

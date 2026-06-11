@@ -130,7 +130,7 @@ function canViewInternalFields(): boolean {
   try {
     const cached = wx.getStorageSync(WECHAT_LOGIN_STORAGE_KEY)
     const source = typeof cached === 'string' ? JSON.parse(cached) : cached
-    return canWechatShare(source)
+    return Boolean(source?.matchedPerson)
   } catch (error) {
     console.warn('read wechat internal field access failed:', error)
     return false
@@ -169,6 +169,7 @@ function buildInfoList(row: HouseDetailRow, showInternalFields: boolean): InfoIt
 }
 
 function toDetailHouse(row: HouseDetailRow): DetailHouse {
+  const showInternalFields = canViewInternalFields()
   const contactPhone = normalizeText(row.phone) || normalizeText(row.mobile) || '4008001234'
   const contactName = normalizeText(row.contactName) || normalizeText(row.brokerName) || '资产顾问'
   const contactAvatar = normalizeText(row.avatar) || normalizeText(row.brokerAvatar)
@@ -185,9 +186,9 @@ function toDetailHouse(row: HouseDetailRow): DetailHouse {
     layoutText: normalizeText(row.layout),
     areaText: formatNumberText(row.area, '㎡'),
     orientationText: normalizeText(row.orientation),
-    infoList: buildInfoList(row, canViewInternalFields()),
+    infoList: buildInfoList(row, showInternalFields),
     auctionHint: row.auctionTime ? `预计开拍：${row.auctionTime}` : '开拍时间待确认',
-    externalLink: normalizeText(row.jumpLink),
+    externalLink: showInternalFields ? normalizeText(row.jumpLink) : '',
     auctionHint: formatAuctionTime(row.auctionTime) ? `预计开拍：${formatAuctionTime(row.auctionTime)}` : '开拍时间待确认',
     contactName,
     contactPhone,
@@ -201,12 +202,12 @@ function toDetailHouse(row: HouseDetailRow): DetailHouse {
 function buildContactFromWechatProfile(profile?: WechatLoginData | null): { contactName: string; contactPhone: string } | null {
   if (!profile) return null
 
-  if (canWechatShare(profile)) {
-    const contactPhone = normalizeText(profile.matchedPerson?.phone) || normalizeText(profile.phoneNumber)
-    if (!contactPhone) return null
+  const internalName = normalizeText(profile.matchedPerson?.name)
+  const internalPhone = normalizeText(profile.matchedPerson?.phone) || normalizeText(profile.phoneNumber)
+  if (internalName && internalPhone) {
     return {
-      contactName: normalizeText(profile.matchedPerson?.name) || '资产顾问',
-      contactPhone,
+      contactName: internalName,
+      contactPhone: internalPhone,
     }
   }
 
@@ -300,8 +301,6 @@ Page({
     syncWechatShareMenu(readWechatLoginCache())
   },
   async resolveWechatContact(sourceId?: number) {
-    if (!sourceId) return null
-
     const cachedProfile = readWechatLoginCache()
     const phoneNumber = String(cachedProfile?.phoneNumber || cachedProfile?.matchedPerson?.phone || '').trim()
     if (!phoneNumber) return buildContactFromWechatProfile(cachedProfile)

@@ -74,6 +74,12 @@ const IMAGE_CLEAN_ALLOWED_HOSTS = new Set([
   'img11.360buyimg.com',
   'img12.360buyimg.com',
 ]);
+const MINI_PROGRAM_ACCESS_MODE_STRICT = 'strict';
+const MINI_PROGRAM_ACCESS_MODE_PUBLIC = 'public';
+const BASIC_SETTINGS_CACHE_TTL_MS = 60 * 1000;
+
+let cachedBasicSettings = null;
+let cachedBasicSettingsAt = 0;
 
 function hashPassword(password) {
   return crypto.createHash('sha256').update(`${PASSWORD_SALT}:${password}`).digest('hex');
@@ -320,6 +326,11 @@ function isSystemStaff(row) {
   return Boolean(row && isEnabledPersonStatus(row.status));
 }
 
+function isInternalMiniProgramViewer(req) {
+  if (req.adminUser && isEnabledPersonStatus(req.adminUser.status)) return true;
+  return Boolean(req.wechatMiniProgramUser?.matchedPerson && isEnabledPersonStatus(req.wechatMiniProgramUser.matchedPerson.status));
+}
+
 async function requireAdminAuth(req, res, next) {
   return requireRoleLevel(1)(req, res, next);
 }
@@ -376,9 +387,33 @@ async function allowAdminOrShareAccess(req, res, next) {
       };
       return next();
     }
+
+    const phoneProfile = await buildWechatPhoneProfileWithShareKey(pool, requestPhone);
+    if (phoneProfile?.accessGranted) {
+      req.wechatMiniProgramUser = {
+        phoneNumber: requestPhone,
+        matchedPerson: phoneProfile.matchedPerson || null,
+        salesPerson: phoneProfile.salesPerson || null,
+      };
+      return next();
+    }
   }
 
   const shareKey = readWechatShareKey(req);
+  if (requestPhone && shareKey) {
+    const shareAccess = await processCustomerShareAccess(pool, requestPhone, shareKey);
+    if (shareAccess?.accessGranted) {
+      const profile = shareAccess.profile || await buildWechatPhoneProfileWithShareKey(pool, requestPhone);
+      req.wechatMiniProgramUser = {
+        phoneNumber: requestPhone,
+        matchedPerson: profile?.matchedPerson || null,
+        salesPerson: profile?.salesPerson || null,
+      };
+      req.wechatShare = shareAccess.share || null;
+      return next();
+    }
+  }
+
   if (!shareKey) {
     return res.status(403).json({ success: false, ok: false, message: '请通过销售分享进入' });
   }
@@ -390,6 +425,44 @@ async function allowAdminOrShareAccess(req, res, next) {
 
   req.wechatShare = share;
   next();
+}
+
+async function getBasicSettingsRow(connection) {
+  const now = Date.now();
+  if (cachedBasicSettings && (now - cachedBasicSettingsAt) < BASIC_SETTINGS_CACHE_TTL_MS) {
+    return cachedBasicSettings;
+  }
+
+  const [rows] = await connection.query(
+    `SELECT id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, mini_program_access_mode, updated_at
+       FROM basic_settings
+      WHERE id = 1
+      LIMIT 1`
+  );
+  cachedBasicSettings = rows?.[0] || null;
+  cachedBasicSettingsAt = now;
+  return cachedBasicSettings;
+}
+
+async function resolveMiniProgramAccessMode(connection) {
+  const settings = await getBasicSettingsRow(connection);
+  const mode = String(settings?.mini_program_access_mode || '').trim().toLowerCase();
+  return mode === MINI_PROGRAM_ACCESS_MODE_PUBLIC
+    ? MINI_PROGRAM_ACCESS_MODE_PUBLIC
+    : MINI_PROGRAM_ACCESS_MODE_STRICT;
+}
+
+async function isMiniProgramPublicAccessEnabled(connection) {
+  return (await resolveMiniProgramAccessMode(connection)) === MINI_PROGRAM_ACCESS_MODE_PUBLIC;
+}
+
+async function allowMiniProgramReadAccess(req, res, next) {
+  const accessMode = await resolveMiniProgramAccessMode(pool);
+  req.miniProgramAccessMode = accessMode;
+  if (accessMode === MINI_PROGRAM_ACCESS_MODE_PUBLIC) {
+    return next();
+  }
+  return allowAdminOrShareAccess(req, res, next);
 }
 
 function sanitizePersonRow(row) {
@@ -1717,6 +1790,7 @@ async function findSystemStaffById(connection, id) {
 }
 
 async function buildWechatPhoneProfileWithShareKey(connection, phone) {
+  const publicAccessEnabled = await isMiniProgramPublicAccessEnabled(connection);
   const currentPerson = await findSystemStaffByPhone(connection, phone);
   const binding = await findCustomerSalesBinding(connection, phone);
   const bindingShare = binding?.share_key ? await findSalesShareByKey(connection, binding.share_key) : null;
@@ -1730,13 +1804,17 @@ async function buildWechatPhoneProfileWithShareKey(connection, phone) {
   const bindingExpired = binding
     ? !binding.sales_openid || isShareInvalid(bindingShare)
     : true;
-  const accessGranted = currentPersonIsStaff || Boolean(binding && !bindingExpired && binding.sales_openid);
+  const accessGranted = publicAccessEnabled
+    ? true
+    : currentPersonIsStaff || Boolean(binding && !bindingExpired && binding.sales_openid);
   let accessMessage = '';
 
   if (currentPersonIsSales) {
     accessMessage = '销售身份已识别';
   } else if (currentPersonIsStaff) {
     accessMessage = '内部人员身份已识别';
+  } else if (publicAccessEnabled) {
+    accessMessage = '公开浏览模式';
   } else if (!binding || !binding.sales_openid) {
     accessMessage = '请通过销售分享进入';
   } else if (bindingExpired) {
@@ -1776,6 +1854,7 @@ async function buildWechatPhoneProfileWithShareKey(connection, phone) {
 
 async function processCustomerShareAccess(connection, phone, shareKey) {
   const baseProfile = await buildWechatPhoneProfileWithShareKey(connection, phone);
+  const publicAccessEnabled = await isMiniProgramPublicAccessEnabled(connection);
 
   const currentStaff = await findSystemStaffByPhone(connection, phone);
   if (baseProfile.canShareMiniProgram || isSystemStaff(currentStaff)) {
@@ -1790,8 +1869,10 @@ async function processCustomerShareAccess(connection, phone, shareKey) {
 
   if (!shareKey) {
     return {
-      accessGranted: Boolean(baseProfile.accessGranted),
-      accessMessage: baseProfile.accessMessage || '\u8bf7\u901a\u8fc7\u9500\u552e\u5206\u4eab\u8fdb\u5165',
+      accessGranted: publicAccessEnabled ? true : Boolean(baseProfile.accessGranted),
+      accessMessage: publicAccessEnabled
+        ? '公开浏览模式'
+        : (baseProfile.accessMessage || '\u8bf7\u901a\u8fc7\u9500\u552e\u5206\u4eab\u8fdb\u5165'),
       shareAction: 'none',
       share: null,
       profile: baseProfile,
@@ -1801,10 +1882,11 @@ async function processCustomerShareAccess(connection, phone, shareKey) {
   const currentShare = await findSalesShareByKey(connection, shareKey);
   if (isShareInvalid(currentShare)) {
     return {
-      accessGranted: false,
-      accessMessage: '\u5206\u4eab\u65e0\u6548\uff0c\u8bf7\u8054\u7cfb\u9500\u552e',
-      shareAction: 'invalid',
+      accessGranted: publicAccessEnabled,
+      accessMessage: publicAccessEnabled ? '公开浏览模式' : '\u5206\u4eab\u65e0\u6548\uff0c\u8bf7\u8054\u7cfb\u9500\u552e',
+      shareAction: publicAccessEnabled ? 'none' : 'invalid',
       share: sanitizeShareRow(currentShare),
+      profile: baseProfile,
     };
   }
 
@@ -1814,19 +1896,21 @@ async function processCustomerShareAccess(connection, phone, shareKey) {
     : await findSystemStaffByPhone(connection, sharePhone);
   if (!sharePhone || !isSystemStaff(salesPerson)) {
     return {
-      accessGranted: false,
-      accessMessage: '\u5206\u4eab\u65e0\u6548\uff0c\u8bf7\u8054\u7cfb\u9500\u552e',
-      shareAction: 'invalid',
+      accessGranted: publicAccessEnabled,
+      accessMessage: publicAccessEnabled ? '公开浏览模式' : '\u5206\u4eab\u65e0\u6548\uff0c\u8bf7\u8054\u7cfb\u9500\u552e',
+      shareAction: publicAccessEnabled ? 'none' : 'invalid',
       share: sanitizeShareRow(currentShare),
+      profile: baseProfile,
     };
   }
 
   if (phone === sharePhone) {
     return {
-      accessGranted: false,
-      accessMessage: '\u4e0d\u80fd\u7ed1\u5b9a\u81ea\u5df1\u7684\u5206\u4eab',
-      shareAction: 'invalid',
+      accessGranted: publicAccessEnabled,
+      accessMessage: publicAccessEnabled ? '公开浏览模式' : '\u4e0d\u80fd\u7ed1\u5b9a\u81ea\u5df1\u7684\u5206\u4eab',
+      shareAction: publicAccessEnabled ? 'none' : 'invalid',
       share: sanitizeShareRow(currentShare),
+      profile: baseProfile,
     };
   }
 
@@ -1873,13 +1957,15 @@ async function processCustomerShareAccess(connection, phone, shareKey) {
   }
 
   const profile = await buildWechatPhoneProfileWithShareKey(connection, phone);
-  const accessGranted = shareAction === 'invalid'
+  const accessGranted = publicAccessEnabled
+    ? true
+    : shareAction === 'invalid'
     ? false
     : Boolean(profile.accessGranted);
 
   return {
     accessGranted,
-    accessMessage: accessMessage || profile.accessMessage,
+    accessMessage: publicAccessEnabled ? '公开浏览模式' : (accessMessage || profile.accessMessage),
     shareAction,
     share: sanitizeShareRow(currentShare),
     profile,
@@ -2057,6 +2143,7 @@ async function upsertWechatUser(connection, params) {
 }
 
 async function buildWechatLoginProfile(connection, openid, unionid) {
+  const publicAccessEnabled = await isMiniProgramPublicAccessEnabled(connection);
   const currentPerson = await findSystemStaffByWechatOpenid(connection, openid);
   const binding = await findWechatUser(connection, openid);
   const boundSalesPerson = binding?.sales_openid
@@ -2070,11 +2157,15 @@ async function buildWechatLoginProfile(connection, openid, unionid) {
   const bindingExpired = binding
     ? !binding.sales_openid || isAuthorizedExpired(authorizedUntilDate)
     : true;
-  const accessGranted = currentPersonIsStaff || Boolean(binding && !bindingExpired && binding.sales_openid);
+  const accessGranted = publicAccessEnabled
+    ? true
+    : currentPersonIsStaff || Boolean(binding && !bindingExpired && binding.sales_openid);
   let accessMessage = '';
 
   if (currentPersonIsStaff) {
     accessMessage = currentPersonIsSales ? '销售身份已识别' : '内部人员身份已识别';
+  } else if (publicAccessEnabled) {
+    accessMessage = '公开浏览模式';
   } else if (!binding || !binding.sales_openid) {
     accessMessage = '请联系销售';
   } else if (bindingExpired) {
@@ -2112,6 +2203,7 @@ async function buildWechatLoginProfile(connection, openid, unionid) {
 }
 
 async function buildWechatLoginProfileWithShareKey(connection, openid, unionid) {
+  const publicAccessEnabled = await isMiniProgramPublicAccessEnabled(connection);
   const currentPerson = await findSystemStaffByWechatOpenid(connection, openid);
   const binding = await findCustomerSalesBinding(connection, openid);
   const fallbackUser = binding ? null : await findWechatUser(connection, openid);
@@ -2126,11 +2218,15 @@ async function buildWechatLoginProfileWithShareKey(connection, openid, unionid) 
   const bindingExpired = binding
     ? !binding.sales_openid || isShareInvalid(bindingShare)
     : true;
-  const accessGranted = currentPersonIsStaff || Boolean(binding && !bindingExpired && binding.sales_openid);
+  const accessGranted = publicAccessEnabled
+    ? true
+    : currentPersonIsStaff || Boolean(binding && !bindingExpired && binding.sales_openid);
   let accessMessage = '';
 
   if (currentPersonIsStaff) {
     accessMessage = currentPersonIsSales ? '销售身份已识别' : '内部人员身份已识别';
+  } else if (publicAccessEnabled) {
+    accessMessage = '公开浏览模式';
   } else if (!binding || !binding.sales_openid) {
     accessMessage = fallbackUser?.sales_openid ? '请通过销售新的分享链接进入' : '请联系销售';
   } else if (bindingExpired) {
@@ -2575,8 +2671,8 @@ async function createApp() {
   app.post('/api/approval-tasks/:id/approve', requireLevel2Auth, asyncHandler(approveApprovalTask));
   app.post('/api/approval-tasks/:id/reject', requireLevel2Auth, asyncHandler(rejectApprovalTask));
 
-  app.get('/api/special-assets', allowAdminOrShareAccess, asyncHandler(listSpecialAssets));
-  app.get('/api/special-assets/:id', allowAdminOrShareAccess, asyncHandler(getSpecialAsset));
+  app.get('/api/special-assets', allowMiniProgramReadAccess, asyncHandler(listSpecialAssets));
+  app.get('/api/special-assets/:id', allowMiniProgramReadAccess, asyncHandler(getSpecialAsset));
   app.post('/api/special-assets', requireStaffAuth, upload.fields([
     { name: 'cover', maxCount: 1 },
     { name: 'gallery', maxCount: 12 },
@@ -2587,22 +2683,19 @@ async function createApp() {
   ]), asyncHandler(updateSpecialAsset));
   app.delete('/api/special-assets/:id', requireStaffAuth, asyncHandler(deleteSpecialAsset));
 
-  app.get('/api/basic-settings', allowAdminOrShareAccess, asyncHandler(async (_, res) => {
-    const [rows] = await pool.query(
-      `SELECT id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, updated_at
-         FROM basic_settings
-        WHERE id = 1`
-    );
+  app.get('/api/basic-settings', allowMiniProgramReadAccess, asyncHandler(async (_, res) => {
+    const settings = await getBasicSettingsRow(pool);
 
     res.json({
       success: true,
-      data: rows[0] || {
+      data: settings || {
         id: 1,
         min_house_price: 0,
         max_house_price: 150,
         interest_rate: 3.15,
         fapai_intro: '',
         low_down_payment_intro: '',
+        mini_program_access_mode: MINI_PROGRAM_ACCESS_MODE_STRICT,
       },
     });
   }));
@@ -2627,17 +2720,29 @@ async function createApp() {
     }
 
     await pool.query(
-      `INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro)
-       VALUES (1, ?, ?, ?, ?, ?)
+      `INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, mini_program_access_mode)
+       VALUES (1, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          min_house_price = VALUES(min_house_price),
          max_house_price = VALUES(max_house_price),
          interest_rate = VALUES(interest_rate),
          fapai_intro = VALUES(fapai_intro),
-         low_down_payment_intro = VALUES(low_down_payment_intro)`,
-      [minHousePrice, maxHousePrice, interestRate, fapaiIntro, lowDownPaymentIntro]
+         low_down_payment_intro = VALUES(low_down_payment_intro),
+         mini_program_access_mode = VALUES(mini_program_access_mode)`,
+      [
+        minHousePrice,
+        maxHousePrice,
+        interestRate,
+        fapaiIntro,
+        lowDownPaymentIntro,
+        String(req.body?.mini_program_access_mode || MINI_PROGRAM_ACCESS_MODE_STRICT).trim().toLowerCase() === MINI_PROGRAM_ACCESS_MODE_PUBLIC
+          ? MINI_PROGRAM_ACCESS_MODE_PUBLIC
+          : MINI_PROGRAM_ACCESS_MODE_STRICT,
+      ]
     );
 
+    cachedBasicSettings = null;
+    cachedBasicSettingsAt = 0;
     const [rows] = await pool.query('SELECT * FROM basic_settings WHERE id = 1');
     res.json({ success: true, data: rows[0], message: '保存成功' });
   }));
@@ -2715,7 +2820,7 @@ async function createApp() {
     res.json({ ok: true, result });
   }));
 
-  app.get('/api/djl/map/districts', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/djl/map/districts', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const items = await queryDjlMapDistricts(pool);
     res.json({
       ok: true,
@@ -2726,7 +2831,7 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/djl/map/sub-areas', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/djl/map/sub-areas', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const items = await queryDjlMapSubAreas(pool, {
       areaCode: req.query.areaCode,
     });
@@ -2739,7 +2844,7 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/djl/map/communities', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/djl/map/communities', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const items = await queryDjlMapCommunities(pool, {
       areaCode: req.query.areaCode,
       subAreaName: req.query.subAreaName,
@@ -2763,7 +2868,7 @@ async function createApp() {
     res.json({ ok: true, result, runningTask });
   }));
 
-  app.get('/api/fapai-houses/district-options', requireRoleLevel(3), asyncHandler(async (req, res) => {
+  app.get('/api/fapai-houses/district-options', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const items = await queryFapaiDistrictOptions(pool);
     res.json({
       ok: true,
@@ -2774,20 +2879,31 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/fapai-houses', requireRoleLevel(3), asyncHandler(async (req, res) => {
+  app.get('/api/fapai-houses', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const result = await queryFapaiHouseList(pool, {
       page: req.query.page,
+      pageNum: req.query.pageNum,
       pageSize: req.query.pageSize,
       includeTotal: req.query.includeTotal,
       title: req.query.title,
+      searchName: req.query.searchName,
+      type: req.query.type,
+      status: req.query.status,
+      auctionMode: req.query.auctionMode,
+      sortName: req.query.sortName,
+      sortStyle: req.query.sortStyle,
       districtId: req.query.districtId,
       startDate: req.query.startDate,
       endDate: req.query.endDate,
+      minArea: req.query.minArea,
+      maxArea: req.query.maxArea,
+      minStartingPrice: req.query.minStartingPrice,
+      maxStartingPrice: req.query.maxStartingPrice,
     });
     res.json({ ok: true, result });
   }));
 
-  app.get('/api/fapai-houses/detail', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/fapai-houses/detail', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const result = await queryFapaiHouseDetail(pool, {
       id: req.query.id,
       sourceId: req.query.sourceId,
@@ -2796,7 +2912,12 @@ async function createApp() {
       res.status(404).json({ ok: false, message: 'Fapai house not found' });
       return;
     }
-    res.json({ ok: true, result });
+    const safeResult = { ...result };
+    if (!isInternalMiniProgramViewer(req)) {
+      safeResult.jumpLink = '';
+      safeResult.fileList = '';
+    }
+    res.json({ ok: true, result: safeResult });
   }));
 
   app.get('/api/fapai-houses/export', requireRoleLevel(3), asyncHandler(async (req, res) => {
@@ -2807,7 +2928,7 @@ async function createApp() {
     res.end(Buffer.from(result.buffer));
   }));
 
-  app.get('/api/fapai/map/districts', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/fapai/map/districts', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const items = await queryFapaiMapDistricts(pool);
     res.json({
       ok: true,
@@ -2818,7 +2939,7 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/fapai/map/sub-areas', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/fapai/map/sub-areas', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const items = await queryFapaiMapSubAreas(pool, {
       areaCode: req.query.areaCode,
     });
@@ -2831,7 +2952,7 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/fapai/map/communities', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/fapai/map/communities', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const items = await queryFapaiMapCommunities(pool, {
       areaCode: req.query.areaCode,
       subAreaName: req.query.subAreaName,
@@ -2845,7 +2966,7 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/fapai/map/houses', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/fapai/map/houses', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const result = await queryFapaiMapHouses(pool, {
       communityId: req.query.communityId,
     });
@@ -2862,7 +2983,7 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/bk/community/price', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/bk/community/price', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const result = await queryBeikeCommunityPrice({
       communityName: req.query.communityName || req.query.name,
       resblockId: req.query.resblockId,
@@ -2873,7 +2994,7 @@ async function createApp() {
     res.json({ ok: true, result });
   }));
 
-  app.get('/api/bk/map/districts', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/bk/map/districts', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const items = await queryDjlMapDistricts(pool);
     res.json({
       ok: true,
@@ -2884,7 +3005,7 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/bk/map/bubbles', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/bk/map/bubbles', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const groupType = String(req.query.groupType || 'district').trim();
     let result;
 
@@ -2982,7 +3103,7 @@ async function createApp() {
     res.json({ ok: true, result });
   }));
 
-  app.get('/api/bk/map/houses', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/bk/map/houses', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const communityId = String(req.query.resblockId || req.query.resblockAltId || '').trim();
     let result;
     if (communityId) {
@@ -3031,7 +3152,7 @@ async function createApp() {
     res.json({ ok: true, result });
   }));
 
-  app.get('/api/bk/ershou/district-options', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/bk/ershou/district-options', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const items = await queryDjlDistrictOptions(pool);
     res.json({
       ok: true,
@@ -3042,7 +3163,7 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/bk/map/house-card', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/bk/map/house-card', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const result = await queryMapHouseCard(pool, {
       date: req.query.date,
       id: req.query.id,
@@ -3051,7 +3172,7 @@ async function createApp() {
     res.json({ ok: true, result });
   }));
 
-  app.get('/api/bk/ershou/list', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/bk/ershou/list', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const result = await queryDjlHouseList(pool, {
       page: req.query.page,
       pageSize: req.query.pageSize,
@@ -3224,7 +3345,7 @@ async function createApp() {
     });
   }));
 
-  app.get('/api/bk/ershou/details/item', allowAdminOrShareAccess, asyncHandler(async (req, res) => {
+  app.get('/api/bk/ershou/details/item', allowMiniProgramReadAccess, asyncHandler(async (req, res) => {
     const result = await queryDetailByListingId(pool, req.query.id);
     res.json({ ok: true, result });
   }));
