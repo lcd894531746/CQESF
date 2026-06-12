@@ -327,6 +327,10 @@ Page({
       auctioningCount: '--',
       comeAuctioningCount: '--',
     },
+    auctionStatLabels: {
+      auctioning: '正在拍卖',
+      coming: '即将拍卖',
+    },
     wechatTestLoading: false,
     wechatTestError: '',
     wechatTestStatusText: '',
@@ -400,9 +404,19 @@ Page({
       const settings = await requestBasicSettings()
       this.setData({
         introText: String(settings.fapai_intro || '').trim(),
+        auctionStatLabels: {
+          auctioning: String(settings.fapai_auctioning_label || '').trim() || '正在拍卖',
+          coming: String(settings.fapai_coming_label || '').trim() || '即将拍卖',
+        },
       })
     } catch (error) {
-      this.setData({ introText: '' })
+      this.setData({
+        introText: '',
+        auctionStatLabels: {
+          auctioning: '正在拍卖',
+          coming: '即将拍卖',
+        },
+      })
     }
   },
 

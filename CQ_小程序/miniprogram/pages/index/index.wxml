@@ -50,7 +50,7 @@
       </view>
       <view class="stats-card stats-card-running" data-type="1" bindtap="onStatCardTap">
         <view class="stats-content">
-          <text class="stats-label">正在拍卖:</text>
+          <text class="stats-label">{{auctionStatLabels.auctioning}}:</text>
           <view class="stats-value-wrap">
             <text class="stats-value">{{auctionStats.auctioningCount}}</text>
             <text class="stats-unit">套</text>
@@ -63,7 +63,7 @@
       </view>
       <view class="stats-card stats-card-coming" data-type="2" bindtap="onStatCardTap">
         <view class="stats-content">
-          <text class="stats-label">即将拍卖:</text>
+          <text class="stats-label">{{auctionStatLabels.coming}}:</text>
           <view class="stats-value-wrap">
             <text class="stats-value">{{auctionStats.comeAuctioningCount}}</text>
             <text class="stats-unit">套</text>

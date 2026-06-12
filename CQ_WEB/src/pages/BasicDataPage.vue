@@ -16,6 +16,8 @@ const defaultFormState = {
   interest_rate: '3.15',
   fapai_intro: '',
   low_down_payment_intro: '',
+  fapai_auctioning_label: '正在拍卖',
+  fapai_coming_label: '即将拍卖',
   mini_program_access_mode: 'strict',
 }
 
@@ -47,6 +49,8 @@ function fillForm(settings = {}) {
   form.interest_rate = String(settings.interest_rate ?? defaultFormState.interest_rate)
   form.fapai_intro = String(settings.fapai_intro ?? defaultFormState.fapai_intro)
   form.low_down_payment_intro = String(settings.low_down_payment_intro ?? defaultFormState.low_down_payment_intro)
+  form.fapai_auctioning_label = String(settings.fapai_auctioning_label ?? defaultFormState.fapai_auctioning_label)
+  form.fapai_coming_label = String(settings.fapai_coming_label ?? defaultFormState.fapai_coming_label)
   form.mini_program_access_mode = String(settings.mini_program_access_mode ?? defaultFormState.mini_program_access_mode)
 }
 
@@ -57,6 +61,8 @@ function buildPayload() {
     interest_rate: Number(form.interest_rate),
     fapai_intro: form.fapai_intro.trim(),
     low_down_payment_intro: form.low_down_payment_intro.trim(),
+    fapai_auctioning_label: form.fapai_auctioning_label.trim() || defaultFormState.fapai_auctioning_label,
+    fapai_coming_label: form.fapai_coming_label.trim() || defaultFormState.fapai_coming_label,
     mini_program_access_mode: String(form.mini_program_access_mode || 'strict').trim().toLowerCase() === 'public' ? 'public' : 'strict',
   }
 }
@@ -193,6 +199,23 @@ onMounted(async () => {
             </div>
           </div>
 
+          <div class="field-group compact-field-group">
+            <div>
+              <h3>法拍房统计文案</h3>
+              <p class="field-hint">用于小程序首页法拍房统计卡片标题展示。</p>
+            </div>
+            <div class="double-fields">
+              <label>
+                <span class="required-label">正在拍卖文案</span>
+                <input v-model.trim="form.fapai_auctioning_label" maxlength="50" placeholder="正在拍卖" />
+              </label>
+              <label>
+                <span class="required-label">即将拍卖文案</span>
+                <input v-model.trim="form.fapai_coming_label" maxlength="50" placeholder="即将拍卖" />
+              </label>
+            </div>
+          </div>
+
           <div class="intro-grid">
             <div class="field-group intro-field-group">
               <h3>法拍房简介</h3>
@@ -254,5 +277,23 @@ onMounted(async () => {
 
 .mode-option input {
   margin: 0;
+}
+
+.double-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.double-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .double-fields {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

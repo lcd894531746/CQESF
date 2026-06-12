@@ -434,7 +434,7 @@ async function getBasicSettingsRow(connection) {
   }
 
   const [rows] = await connection.query(
-    `SELECT id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, mini_program_access_mode, updated_at
+    `SELECT id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, fapai_auctioning_label, fapai_coming_label, mini_program_access_mode, updated_at
        FROM basic_settings
       WHERE id = 1
       LIMIT 1`
@@ -2695,6 +2695,8 @@ async function createApp() {
         interest_rate: 3.15,
         fapai_intro: '',
         low_down_payment_intro: '',
+        fapai_auctioning_label: '正在拍卖',
+        fapai_coming_label: '即将拍卖',
         mini_program_access_mode: MINI_PROGRAM_ACCESS_MODE_STRICT,
       },
     });
@@ -2706,6 +2708,8 @@ async function createApp() {
     const interestRate = normalizeNumber(req.body.interest_rate);
     const fapaiIntro = String(req.body?.fapai_intro || '').trim();
     const lowDownPaymentIntro = String(req.body?.low_down_payment_intro || '').trim();
+    const fapaiAuctioningLabel = String(req.body?.fapai_auctioning_label || '').trim() || '正在拍卖';
+    const fapaiComingLabel = String(req.body?.fapai_coming_label || '').trim() || '即将拍卖';
 
     if (minHousePrice === null || maxHousePrice === null || interestRate === null) {
       return res.status(400).json({ success: false, message: '房屋价格范围和利率必须是数字' });
@@ -2720,14 +2724,16 @@ async function createApp() {
     }
 
     await pool.query(
-      `INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, mini_program_access_mode)
-       VALUES (1, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, fapai_auctioning_label, fapai_coming_label, mini_program_access_mode)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          min_house_price = VALUES(min_house_price),
          max_house_price = VALUES(max_house_price),
          interest_rate = VALUES(interest_rate),
          fapai_intro = VALUES(fapai_intro),
          low_down_payment_intro = VALUES(low_down_payment_intro),
+         fapai_auctioning_label = VALUES(fapai_auctioning_label),
+         fapai_coming_label = VALUES(fapai_coming_label),
          mini_program_access_mode = VALUES(mini_program_access_mode)`,
       [
         minHousePrice,
@@ -2735,6 +2741,8 @@ async function createApp() {
         interestRate,
         fapaiIntro,
         lowDownPaymentIntro,
+        fapaiAuctioningLabel,
+        fapaiComingLabel,
         String(req.body?.mini_program_access_mode || MINI_PROGRAM_ACCESS_MODE_STRICT).trim().toLowerCase() === MINI_PROGRAM_ACCESS_MODE_PUBLIC
           ? MINI_PROGRAM_ACCESS_MODE_PUBLIC
           : MINI_PROGRAM_ACCESS_MODE_STRICT,

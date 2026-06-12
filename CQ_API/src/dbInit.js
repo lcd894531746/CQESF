@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS basic_settings (
   interest_rate DECIMAL(6, 2) NOT NULL DEFAULT 3.15,
   fapai_intro TEXT NULL,
   low_down_payment_intro TEXT NULL,
+  fapai_auctioning_label VARCHAR(50) NOT NULL DEFAULT '正在拍卖',
+  fapai_coming_label VARCHAR(50) NOT NULL DEFAULT '即将拍卖',
   mini_program_access_mode VARCHAR(16) NOT NULL DEFAULT 'strict',
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )
@@ -332,8 +334,16 @@ async function synchronizeBasicSettingsSchema(connection) {
     alters.push('ADD COLUMN `low_down_payment_intro` TEXT NULL AFTER `fapai_intro`');
   }
 
+  if (!columnNames.has('fapai_auctioning_label')) {
+    alters.push("ADD COLUMN `fapai_auctioning_label` VARCHAR(50) NOT NULL DEFAULT '正在拍卖' AFTER `low_down_payment_intro`");
+  }
+
+  if (!columnNames.has('fapai_coming_label')) {
+    alters.push("ADD COLUMN `fapai_coming_label` VARCHAR(50) NOT NULL DEFAULT '即将拍卖' AFTER `fapai_auctioning_label`");
+  }
+
   if (!columnNames.has('mini_program_access_mode')) {
-    alters.push("ADD COLUMN `mini_program_access_mode` VARCHAR(16) NOT NULL DEFAULT 'strict' AFTER `low_down_payment_intro`");
+    alters.push("ADD COLUMN `mini_program_access_mode` VARCHAR(16) NOT NULL DEFAULT 'strict' AFTER `fapai_coming_label`");
   }
 
   if (columnNames.has('house_price')) {

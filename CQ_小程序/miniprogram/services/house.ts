@@ -242,6 +242,8 @@ export type BasicSettingsData = {
   interest_rate?: number
   fapai_intro?: string
   low_down_payment_intro?: string
+  fapai_auctioning_label?: string
+  fapai_coming_label?: string
   mini_program_access_mode?: 'strict' | 'public' | string
   updated_at?: string
 }
