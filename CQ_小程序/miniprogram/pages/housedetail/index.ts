@@ -1,4 +1,4 @@
-import { requestHouseDetail, requestPhoneProfile } from '../../services/house'
+import { requestBasicSettings, requestHouseDetail, requestWechatProfile } from '../../services/house'
 import { cleanYinshanImageUrls } from '../../utils/clean-image'
 import { canWechatShare, hasWechatAccess, readWechatLoginCache, syncWechatShareMenu } from '../../utils/wechat-access'
 
@@ -137,7 +137,7 @@ function canViewInternalFields(): boolean {
   }
 }
 
-function buildInfoList(row: HouseDetailRow, showInternalFields: boolean): InfoItem[] {
+function buildInfoList(row: HouseDetailRow, showInternalFields: boolean, miniProgramAccessMode: 'strict' | 'public'): InfoItem[] {
   const list: InfoItem[] = []
   const communityName = normalizeText(row.communityName)
   const floorLevel = normalizeText(row.floorLevel)
@@ -152,7 +152,7 @@ function buildInfoList(row: HouseDetailRow, showInternalFields: boolean): InfoIt
   list.push({ label: '装修情况', value: guessDecorationText(row.decoration) })
   list.push({ label: '拍卖轮次', value: guessAuctionModeText(row.auctionMode) })
   if (showInternalFields && platform) list.push({ label: '拍卖平台', value: platform })
-  if (auctionTime) list.push({ label: '开拍时间', value: auctionTime })
+  if (miniProgramAccessMode === 'strict' && auctionTime) list.push({ label: '开拍时间', value: auctionTime })
   if (row.guaranteeAmount !== null && row.guaranteeAmount !== undefined) {
     list.push({ label: '保证金', value: formatNumberText(row.guaranteeAmount, '万') })
   }
@@ -168,7 +168,7 @@ function buildInfoList(row: HouseDetailRow, showInternalFields: boolean): InfoIt
   return list
 }
 
-function toDetailHouse(row: HouseDetailRow): DetailHouse {
+function toDetailHouse(row: HouseDetailRow, miniProgramAccessMode: 'strict' | 'public'): DetailHouse {
   const showInternalFields = canViewInternalFields()
   const contactPhone = normalizeText(row.phone) || normalizeText(row.mobile) || '4008001234'
   const contactName = normalizeText(row.contactName) || normalizeText(row.brokerName) || '资产顾问'
@@ -186,8 +186,7 @@ function toDetailHouse(row: HouseDetailRow): DetailHouse {
     layoutText: normalizeText(row.layout),
     areaText: formatNumberText(row.area, '㎡'),
     orientationText: normalizeText(row.orientation),
-    infoList: buildInfoList(row, showInternalFields),
-    auctionHint: row.auctionTime ? `预计开拍：${row.auctionTime}` : '开拍时间待确认',
+    infoList: buildInfoList(row, showInternalFields, miniProgramAccessMode),
     externalLink: showInternalFields ? normalizeText(row.jumpLink) : '',
     auctionHint: formatAuctionTime(row.auctionTime) ? `预计开拍：${formatAuctionTime(row.auctionTime)}` : '开拍时间待确认',
     contactName,
@@ -255,6 +254,7 @@ function resolvePhoneProfileShareKey(profile?: WechatLoginData | null): string {
 Page({
   data: {
     currentImageIndex: 0,
+    miniProgramAccessMode: 'strict' as 'strict' | 'public',
     house: {
       id: 0,
       images: [] as string[],
@@ -281,7 +281,7 @@ Page({
     if (!canViewHouseDetail()) {
       wx.showModal({
         title: '暂无查看权限',
-        content: '请联系销售人员授权后查看详情。',
+        content: '请联系内部人员授权后查看详情。',
         showCancel: false,
         success: () => {
           wx.switchTab({ url: '/pages/index/index' })
@@ -295,19 +295,33 @@ Page({
       setTimeout(() => wx.navigateBack({ delta: 1 }), 600)
       return
     }
-    ;(this as any).loadDetail(id, sourceId)
+    void this.loadBasicSettings().finally(() => {
+      ;(this as any).loadDetail(id, sourceId)
+    })
   },
   onShow() {
     syncWechatShareMenu(readWechatLoginCache())
   },
+  async loadBasicSettings() {
+    try {
+      const settings = await requestBasicSettings()
+      this.setData({
+        miniProgramAccessMode: String(settings.mini_program_access_mode || 'strict').trim().toLowerCase() === 'public'
+          ? 'public'
+          : 'strict',
+      })
+    } catch (error) {
+      this.setData({ miniProgramAccessMode: 'strict' })
+    }
+  },
   async resolveWechatContact(sourceId?: number) {
     const cachedProfile = readWechatLoginCache()
-    const phoneNumber = String(cachedProfile?.phoneNumber || cachedProfile?.matchedPerson?.phone || '').trim()
-    if (!phoneNumber) return buildContactFromWechatProfile(cachedProfile)
+    const openid = String(cachedProfile?.openid || '').trim()
+    if (!openid) return buildContactFromWechatProfile(cachedProfile)
 
     try {
-      const profile = await requestPhoneProfile({
-        phoneNumber,
+      const profile = await requestWechatProfile({
+        openid,
         shareKey: resolvePhoneProfileShareKey(cachedProfile) || undefined,
       })
       return buildContactFromWechatProfile(profile)
@@ -319,7 +333,7 @@ Page({
   async loadDetail(id: number, sourceId?: number) {
     try {
       const row = await requestHouseDetail(id || sourceId || 0, sourceId ? { sourceId } : undefined)
-      const house = toDetailHouse(row)
+      const house = toDetailHouse(row, this.data.miniProgramAccessMode)
       const contact = await this.resolveWechatContact(sourceId)
       if (contact) {
         house.contactName = contact.contactName

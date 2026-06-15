@@ -108,7 +108,57 @@ async function code2Session(code) {
   return result;
 }
 
+async function getUnlimitedQRCode({ scene, page, checkPath = false, envVersion = 'release' }) {
+  if (!scene) {
+    const error = new Error('qrcode scene is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const accessToken = await getAccessToken();
+  const url = new URL('https://api.weixin.qq.com/wxa/getwxacodeunlimit');
+  url.searchParams.set('access_token', accessToken);
+
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      scene,
+      page: page || 'pages/bind-staff/index',
+      check_path: Boolean(checkPath),
+      env_version: envVersion || 'release',
+    });
+    const request = https.request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+      timeout: 30000,
+    }, (response) => {
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => {
+        const buffer = Buffer.concat(chunks);
+        const contentType = String(response.headers['content-type'] || '').toLowerCase();
+        if (contentType.includes('application/json')) {
+          try {
+            const result = JSON.parse(buffer.toString('utf8'));
+            reject(new Error(`Wechat qrcode failed: ${result.errmsg || result.errcode || 'unknown error'}`));
+          } catch (error) {
+            reject(new Error(`Wechat qrcode invalid response: ${error.message}`));
+          }
+          return;
+        }
+        resolve(buffer);
+      });
+    });
+    request.on('timeout', () => request.destroy(new Error('Wechat qrcode timeout')));
+    request.on('error', reject);
+    request.end(payload);
+  });
+}
+
 module.exports = {
   getPhoneNumberByCode,
   code2Session,
+  getUnlimitedQRCode,
 };

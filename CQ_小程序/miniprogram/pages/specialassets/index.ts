@@ -1,4 +1,4 @@
-import { requestBindSalesOpenid, requestBindStaffPhone, requestPhoneProfile, requestSpecialAssets } from '../../services/house'
+import { requestBindSalesOpenid, requestWechatLogin, requestWechatProfile, requestSpecialAssets } from '../../services/house'
 import { consumeShareParams } from '../../utils/wechat-access'
 
 type SpecialAssetRow = import('../../services/house').SpecialAssetRow
@@ -29,9 +29,15 @@ const DEFAULT_ANNUAL_INTEREST_RATE = 3.15
 const WECHAT_LOGIN_STORAGE_KEY = 'wechat_login_result'
 
 function hasAccess(profile?: Partial<WechatLoginData> | null): boolean {
-  if (profile?.canShareMiniProgram || profile?.accessGranted) return true
-  const role = String(profile?.matchedPerson?.role || '').trim()
-  return role === '销售' || role === '管理员'
+  if (!profile) return false
+  if (profile.canShareMiniProgram) return true
+  if (profile.matchedPerson) return true
+  if (!profile.binding?.salesOpenid || profile.binding.expired) return false
+  if (!profile.salesPerson && !profile.binding.salesPersonId) return false
+  const authorizedUntil = String(profile.binding.authorizedUntil || '').trim()
+  if (!authorizedUntil) return true
+  const expireAt = new Date(authorizedUntil).getTime()
+  return Number.isFinite(expireAt) && expireAt > Date.now()
 }
 
 function getRouteOptions(): Record<string, string> {
@@ -45,11 +51,12 @@ function readWechatProfile(): WechatLoginData | null {
     const cached = wx.getStorageSync(WECHAT_LOGIN_STORAGE_KEY)
     if (!cached) return null
     const source = typeof cached === 'string' ? JSON.parse(cached) : cached
+    const openid = String(source?.openid || '').trim()
     const phoneNumber = String(source?.phoneNumber || source?.matchedPerson?.phone || '').trim()
-    if (!phoneNumber) return null
+    if (!openid) return null
     const profile = Object.assign({}, source, {
-      openid: phoneNumber,
-      unionid: '',
+      openid,
+      unionid: String(source?.unionid || '').trim(),
       phoneNumber,
     }) as WechatLoginData
     profile.accessGranted = hasAccess(profile)
@@ -61,11 +68,12 @@ function readWechatProfile(): WechatLoginData | null {
 }
 
 function saveWechatProfile(profile: WechatLoginData) {
-  const phoneNumber = String(profile.phoneNumber || profile.matchedPerson?.phone || profile.openid || '').trim()
-  if (!phoneNumber) return
+  const openid = String(profile.openid || '').trim()
+  const phoneNumber = String(profile.phoneNumber || profile.matchedPerson?.phone || '').trim()
+  if (!openid) return
   wx.setStorageSync(WECHAT_LOGIN_STORAGE_KEY, Object.assign({}, profile, {
-    openid: phoneNumber,
-    unionid: '',
+    openid,
+    unionid: String(profile.unionid || '').trim(),
     phoneNumber,
     accessGranted: hasAccess(profile),
   }))
@@ -80,7 +88,7 @@ function clearWechatProfile() {
 }
 
 function hasCachedPhone(profile?: Partial<WechatLoginData> | null): boolean {
-  return Boolean(String(profile?.phoneNumber || profile?.matchedPerson?.phone || '').trim())
+  return Boolean(String(profile?.openid || '').trim())
 }
 
 function normalizeText(value?: string | number | null): string {
@@ -190,32 +198,30 @@ Page({
     feedLeft: [] as SpecialAssetItem[],
     feedRight: [] as SpecialAssetItem[],
     canView: true,
-    showPhoneAuthDialog: false,
     sharedShareKey: '',
   },
   async bindSalesOpenidIfNeeded(profile: WechatLoginData) {
-    const currentPhone = String(profile.phoneNumber || profile.openid || '').trim()
+    const currentPhone = String(profile.openid || '').trim()
     const shareKey = String(this.data.sharedShareKey || '').trim()
     if (!currentPhone || !shareKey || profile.canShareMiniProgram) {
       return profile
     }
-    const staffRole = String(profile.matchedPerson?.role || '').trim()
-    if (staffRole === '销售' || staffRole === '管理员') {
+    if (profile.matchedPerson) {
       return profile
     }
     const boundProfile = await requestBindSalesOpenid({
-      phoneNumber: currentPhone,
+      openid: currentPhone,
       shareKey,
     })
     saveWechatProfile(boundProfile)
     return boundProfile
   },
   async refreshWechatProfile(profile: WechatLoginData) {
-    const currentPhone = String(profile.phoneNumber || profile.openid || '').trim()
+    const currentPhone = String(profile.openid || '').trim()
     if (!currentPhone) return profile
     try {
-      const refreshedProfile = await requestPhoneProfile({
-        phoneNumber: currentPhone,
+      const refreshedProfile = await requestWechatProfile({
+        openid: currentPhone,
         shareKey: String(this.data.sharedShareKey || '').trim() || undefined,
       })
       saveWechatProfile(refreshedProfile)
@@ -230,9 +236,9 @@ Page({
     const { shareKey: sharedShareKey } = consumeShareParams(routeOptions)
     this.setData({ sharedShareKey })
 
-    const profile = readWechatProfile()
-    const canUseCache = hasCachedPhone(profile)
-    if (!canUseCache) clearWechatProfile()
+    clearWechatProfile()
+    const profile = null
+    const canUseCache = false
     if (canUseCache && profile) {
       void this.refreshWechatProfile(profile).then((refreshedProfile) => this.bindSalesOpenidIfNeeded(refreshedProfile)).then((nextProfile) => {
         const canView = hasAccess(nextProfile)
@@ -365,12 +371,11 @@ Page({
   async onBindStaffPhone(e: WechatMiniprogram.ButtonGetPhoneNumber) {
     const code = String(e.detail?.code || '').trim()
     if (!code) {
-      wx.showToast({ title: '需要授权手机号', icon: 'none' })
-      this.onRejectPhoneAuth()
+      wx.showToast({ title: '正在获取微信身份', icon: 'none' })
       return
     }
     try {
-      const boundProfile = await requestBindStaffPhone({
+      const boundProfile = await requestWechatLogin({
         code,
         shareKey: String(this.data.sharedShareKey || '').trim() || undefined,
       })
@@ -383,7 +388,7 @@ Page({
       })
       if (canView) ;(this as any).refreshList()
       wx.showToast({
-        title: canView ? '手机号绑定成功' : (profileAfterShare.accessMessage || '请通过销售分享进入'),
+        title: canView ? '微信身份识别成功' : (profileAfterShare.accessMessage || '请通过内部人员分享进入'),
         icon: canView ? 'success' : 'none',
       })
     } catch (error) {

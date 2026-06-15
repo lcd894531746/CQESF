@@ -44,7 +44,7 @@
       <view class="drawer-head">
         <view class="drawer-title-wrap">
           <view class="drawer-title">{{activeCommunityName}}</view>
-          <view class="drawer-subtitle">{{sourceType === 'ershou' ? '当前小区低首付房源' : '当前小区法拍房源'}}</view>
+          <view class="drawer-subtitle">{{sourceType === 'ershou' ? '当前小区低首付房源' : '当前小区源'}}</view>
         </view>
         <view class="drawer-close" bindtap="onDrawerCloseTap">关闭</view>
       </view>

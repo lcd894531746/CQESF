@@ -29,14 +29,14 @@
         </view>
         <view class="search-btn" bindtap="onSearchTap">搜索</view>
       </view>
-      <view class="map-entry" bindtap="onMapEntryTap">
+      <view class="map-entry" wx:if="{{miniProgramAccessMode == 'strict'}}" bindtap="onMapEntryTap">
         <image class="map-entry-icon" src="/assets/icons/icon_ditu.png" mode="aspectFit" />
         <text class="map-entry-text">地图找房</text>
       </view>
     </view>
 
-    <view class="stats-row">
-      <view class="stats-card stats-card-new" data-type="0" bindtap="onStatCardTap">
+    <view class="stats-row" wx:if="{{miniProgramAccessMode == 'strict'}}">
+      <view class="stats-card stats-card-new"  data-type="0" bindtap="onStatCardTap">
         <view class="stats-content">
           <text class="stats-label">今日新增:</text>
           <view class="stats-value-wrap">
@@ -106,7 +106,7 @@
           <view class="house-card" data-id="{{item.id}}" data-sourceid="{{item.sourceId}}" bindtap="onHouseTap">
             <view class="house-image-wrap">
               <image class="house-image" src="{{item.image}}" mode="aspectFill"></image>
-              <image class="auction-mode-badge" wx:if="{{item.auctionModeBadge}}" src="{{item.auctionModeBadge}}" mode="aspectFit" />
+              <image class="auction-mode-badge" wx:if="{{item.auctionModeBadge && miniProgramAccessMode == 'strict'}}" src="{{item.auctionModeBadge}}" mode="aspectFit" />
               <view class="community-overlay">
                 <text class="community-text">{{item.communityNameText}}</text>
               </view>
@@ -119,8 +119,8 @@
                 <text class="meta-chip" wx:if="{{item.orientationText}}">{{item.orientationText}}</text>
               </view>
               <view class="price-line">
-                <view class="price-item price-main">
-                  <text class="price-label-main">起拍价</text>
+                <view class="price-item price-main" >
+                  <text class="price-label-main" wx:if="{{miniProgramAccessMode == 'strict'}}">起拍价</text>
                   <text class="price-start">{{item.startingPriceText}}</text>
                 </view>
                 <view class="price-item price-market-wrap">
@@ -128,7 +128,7 @@
                   <text class="price-market">{{item.marketPriceText}}</text>
                 </view>
               </view>
-              <view class="status-line">
+              <view class="status-line" wx:if="{{miniProgramAccessMode == 'strict'}}">
                 <text class="status-label status-{{item.auctionStatusType}}">{{item.auctionStatusText}}</text>
                 <text class="time-text">{{item.auctionTimeText}}</text>
               </view>
@@ -141,7 +141,7 @@
           <view class="house-card" data-id="{{item.id}}" data-sourceid="{{item.sourceId}}" bindtap="onHouseTap">
             <view class="house-image-wrap">
               <image class="house-image" src="{{item.image}}" mode="aspectFill"></image>
-              <image class="auction-mode-badge" wx:if="{{item.auctionModeBadge}}" src="{{item.auctionModeBadge}}" mode="aspectFit" />
+              <image class="auction-mode-badge" wx:if="{{item.auctionModeBadge  && miniProgramAccessMode == 'strict'}}" src="{{item.auctionModeBadge}}" mode="aspectFit" />
               <view class="community-overlay">
                 <text class="community-text">{{item.communityNameText}}</text>
               </view>
@@ -155,7 +155,7 @@
               </view>
               <view class="price-line">
                 <view class="price-item price-main">
-                  <text class="price-label-main">起拍价</text>
+                  <text class="price-label-main" wx:if="{{miniProgramAccessMode == 'strict'}}">起拍价</text>
                   <text class="price-start">{{item.startingPriceText}}</text>
                 </view>
                 <view class="price-item price-market-wrap">
@@ -163,7 +163,7 @@
                   <text class="price-market">{{item.marketPriceText}}</text>
                 </view>
               </view>
-              <view class="status-line">
+              <view class="status-line" wx:if="{{miniProgramAccessMode == 'strict'}}">
                 <text class="status-label status-{{item.auctionStatusType}}">{{item.auctionStatusText}}</text>
                 <text class="time-text">{{item.auctionTimeText}}</text>
               </view>
@@ -176,10 +176,14 @@
         <text class="empty-state-title">暂无数据</text>
         <text class="empty-state-desc">换个筛选条件试试，或稍后再来看</text>
       </view>
+      <view class="empty-state empty-state-guide" wx:elif="{{!isLoadingMore}}">
+        <text class="empty-state-title">暂未开通查看权限</text>
+        <text class="empty-state-desc">{{wechatTestStatusText || (wechatTestResult.openid ? (wechatTestResult.accessMessage || '请联系内部人员给你发送绑定后，再从小程序内完成绑定') : '正在识别微信身份，请稍候') }}</text>
+      </view>
       <view class="load-more-tip" wx:if="{{(wechatTestResult.canShareMiniProgram || (wechatTestResult.accessGranted && (wechatTestResult.matchedPerson || (wechatTestResult.binding && wechatTestResult.binding.salesOpenid)))) && !hasMore}}">没有更多了</view>
     </view>
   </scroll-view>
-  <view class="phone-auth-mask" wx:if="{{showPhoneAuthDialog}}">
+  <view class="phone-auth-mask" wx:if="{{false}}">
     <view class="phone-auth-dialog">
       <text class="phone-auth-title">需要获取手机号</text>
       <text class="phone-auth-desc">授权手机号前，请先阅读并同意以下协议。</text>

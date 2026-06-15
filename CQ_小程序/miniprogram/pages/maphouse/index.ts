@@ -120,9 +120,9 @@ const ERSHOU_BIZCIRCLE_MAX_SCALE = 13
 const ERSHOU_DETAIL_CACHE_KEY = 'ershou_detail_cache'
 
 const HOUSE_TYPE_TABS = [
-  { id: 2, label: '法拍住宅' },
-  { id: 1, label: '法拍商业' },
-  { id: 3, label: '法拍工业' },
+  { id: 2, label: '住宅' },
+  { id: 1, label: '商业' },
+  { id: 3, label: '工业' },
 ]
 
 function normalizeText(value?: string | number | null): string {
@@ -452,7 +452,7 @@ function buildAuctionDrawerItem(row: FapaiMapHouseRow, index: number): DrawerIte
   const startingPriceValue = Number(row.startingPrice || 0)
   const marketPriceValue = Number(row.marketPrice || 0)
   const position = normalizeText(row.detailAddress) || normalizeText(row.communityName) || normalizeText(row.title) || '暂无小区'
-  const title = normalizeText(row.title) || normalizeText(row.communityName) || '法拍房源'
+  const title = normalizeText(row.title) || normalizeText(row.communityName) || '源'
   const sourceId = row.sourceId ? String(row.sourceId) : ''
   const itemId = sourceId || (row.id ? String(row.id) : String(index + 1))
   const image = cleanYinshanImageUrl(
@@ -496,7 +496,7 @@ function buildAuctionDrawerItem(row: FapaiMapHouseRow, index: number): DrawerIte
     image,
     hasImage: Boolean(image),
     totalPriceText: detailPayload.totalPriceText,
-    unitPriceText: detailPayload.unitPriceText || '法拍房源',
+    unitPriceText: detailPayload.unitPriceText || '源',
     downPaymentText: normalizeText(row.auctionTime) || '开拍时间待定',
     monthlyPaymentText: statusText || '状态待定',
     layoutText: detailPayload.layoutText,
@@ -994,7 +994,7 @@ Page({
         scale: 14,
         zoomLevel: 'community',
         pageDesc: parent.name + ' · 小区分布',
-        mapTipText: '点击小区查看法拍房源',
+        mapTipText: '点击小区查看源',
         loading: false,
       })
       markProgrammaticRegionChange(this, 4)
@@ -1024,9 +1024,9 @@ Page({
           drawerVisible: false,
           activeCommunityName: meta.name,
           activeCommunityListings: [],
-          mapTipText: meta.name + ' 暂无法拍房源',
+          mapTipText: meta.name + ' 暂无源',
         })
-        wx.showToast({ title: meta.name + ' 暂无法拍房源', icon: 'none' })
+        wx.showToast({ title: meta.name + ' 暂无源', icon: 'none' })
         return
       }
       this.setData({
@@ -1034,7 +1034,7 @@ Page({
         drawerVisible: true,
         activeCommunityName: response.communityName || meta.name,
         activeCommunityListings: listings,
-        mapTipText: '当前展示 ' + (response.communityName || meta.name) + ' 的法拍房源',
+        mapTipText: '当前展示 ' + (response.communityName || meta.name) + ' 的源',
       })
     } catch (error) {
       console.error('loadAuctionCommunityHouses failed', { meta, error })

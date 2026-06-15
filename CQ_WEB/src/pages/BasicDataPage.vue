@@ -16,6 +16,7 @@ const defaultFormState = {
   interest_rate: '3.15',
   fapai_intro: '',
   low_down_payment_intro: '',
+  fapai_home_label: '法拍房',
   fapai_auctioning_label: '正在拍卖',
   fapai_coming_label: '即将拍卖',
   mini_program_access_mode: 'strict',
@@ -49,6 +50,7 @@ function fillForm(settings = {}) {
   form.interest_rate = String(settings.interest_rate ?? defaultFormState.interest_rate)
   form.fapai_intro = String(settings.fapai_intro ?? defaultFormState.fapai_intro)
   form.low_down_payment_intro = String(settings.low_down_payment_intro ?? defaultFormState.low_down_payment_intro)
+  form.fapai_home_label = String(settings.fapai_home_label ?? defaultFormState.fapai_home_label)
   form.fapai_auctioning_label = String(settings.fapai_auctioning_label ?? defaultFormState.fapai_auctioning_label)
   form.fapai_coming_label = String(settings.fapai_coming_label ?? defaultFormState.fapai_coming_label)
   form.mini_program_access_mode = String(settings.mini_program_access_mode ?? defaultFormState.mini_program_access_mode)
@@ -61,6 +63,7 @@ function buildPayload() {
     interest_rate: Number(form.interest_rate),
     fapai_intro: form.fapai_intro.trim(),
     low_down_payment_intro: form.low_down_payment_intro.trim(),
+    fapai_home_label: form.fapai_home_label.trim() || defaultFormState.fapai_home_label,
     fapai_auctioning_label: form.fapai_auctioning_label.trim() || defaultFormState.fapai_auctioning_label,
     fapai_coming_label: form.fapai_coming_label.trim() || defaultFormState.fapai_coming_label,
     mini_program_access_mode: String(form.mini_program_access_mode || 'strict').trim().toLowerCase() === 'public' ? 'public' : 'strict',
@@ -195,6 +198,19 @@ onMounted(async () => {
               <label class="mode-option">
                 <input v-model="form.mini_program_access_mode" type="radio" value="public" />
                 <span>公开浏览模式</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field-group compact-field-group">
+            <div>
+              <h3>首页名称文案</h3>
+              <p class="field-hint">用于小程序首页顶部标题和底部第一个 Tab 文案。</p>
+            </div>
+            <div class="single-field">
+              <label>
+                <span class="required-label">首页名称</span>
+                <input v-model.trim="form.fapai_home_label" maxlength="50" placeholder="法拍房" />
               </label>
             </div>
           </div>

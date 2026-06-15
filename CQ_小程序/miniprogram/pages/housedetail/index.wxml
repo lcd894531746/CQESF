@@ -36,7 +36,7 @@
       </view>
       <view class="price-card">
         <view class="price-row">
-          <text class="price-label">起拍价</text>
+          <text class="price-label" wx:if="{{miniProgramAccessMode == 'strict'}}">起拍价</text>
           <text class="price-start">{{house.startingPriceText}}</text>
           <text class="price-gap">市场价</text>
           <text class="price-market">{{house.marketPriceText}}</text>
@@ -44,10 +44,10 @@
       </view>
       <view class="meta-row">
         <text class="meta-chip">{{house.layoutText || '户型暂无'}}</text>
-        <text class="meta-chip">{{house.areaText}}</text>
+        <text class="meta-chip" >{{house.areaText}}</text>
         <text class="meta-chip" wx:if="{{house.orientationText}}">{{house.orientationText}}</text>
       </view>
-      <view class="auction-tip">{{house.auctionHint}}</view>
+      <view class="auction-tip" wx:if="{{miniProgramAccessMode == 'strict'}}">{{house.auctionHint}}</view>
       <view class="info-card">
         <view class="card-title">房源信息</view>
         <view class="info-grid">

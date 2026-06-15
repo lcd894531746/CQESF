@@ -5,7 +5,7 @@ Component({
     list: [
       {
         pagePath: '/pages/index/index',
-        text: '法拍房',
+        text: '',
         icon: '⌂',
       },
       {
@@ -46,6 +46,13 @@ Component({
     setSelected(index: number) {
       if (index < 0 || index === this.data.selected) return
       this.setData({ selected: index })
+    },
+    setHomeLabel(text: string) {
+      const label = String(text || '').trim() || ''
+      const list = this.data.list.slice()
+      if (!list[0] || list[0].text === label) return
+      list[0] = Object.assign({}, list[0], { text: label })
+      this.setData({ list })
     },
   },
 })

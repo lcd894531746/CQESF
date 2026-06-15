@@ -41,5 +41,6 @@ module.exports = {
   wechat: {
     appId: firstDefined(process.env.WECHAT_APP_ID, process.env.WX_APP_ID, process.env.MP_APP_ID, ''),
     appSecret: firstDefined(process.env.WECHAT_APP_SECRET, process.env.WX_APP_SECRET, process.env.MP_APP_SECRET, ''),
+    qrCodeEnvVersion: firstDefined(process.env.WECHAT_QRCODE_ENV_VERSION, 'trial'),
   },
 };

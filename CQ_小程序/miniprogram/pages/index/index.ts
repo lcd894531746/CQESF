@@ -1,8 +1,7 @@
-import { requestBasicSettings, requestBindSalesOpenid, requestHouseList, requestServiceTel } from '../../services/house'
+import { requestBasicSettings, requestBindSalesOpenid, requestHouseList, requestServiceTel, requestWechatLogin, requestWechatProfile } from '../../services/house'
 import { parseAreaRange, parsePriceRange, splitColumns } from '../../utils/house-filters.js'
 import { cleanYinshanImageUrl } from '../../utils/clean-image'
 import { canWechatShare, consumeShareParams, syncWechatShareMenu } from '../../utils/wechat-access'
-import { requestBindStaffPhone, requestPhoneProfile } from '../../services/house'
 import { requestCreateWechatShare } from '../../services/house'
 
 type HouseListQuery = import('../../services/house').HouseListQuery
@@ -203,11 +202,12 @@ function readWechatLoginCache(): WechatTestResult | null {
     const cached = wx.getStorageSync(WECHAT_LOGIN_STORAGE_KEY)
     if (!cached) return null
     const source = typeof cached === 'string' ? JSON.parse(cached) : cached
+    const openid = String(source?.openid || '').trim()
     const phoneNumber = String(source?.phoneNumber || source?.matchedPerson?.phone || '').trim()
-    if (!phoneNumber) return null
+    if (!openid) return null
     const accessGranted = hasWechatAccess(source)
     return {
-      openid: phoneNumber,
+      openid,
       unionid: String((source && source.unionid) || '').trim(),
       phoneNumber,
       isSales: Boolean(source?.isSales),
@@ -228,12 +228,13 @@ function readWechatLoginCache(): WechatTestResult | null {
 }
 
 function saveWechatLoginCache(result: WechatTestResult) {
-  const phoneNumber = String(result.phoneNumber || result.matchedPerson?.phone || result.openid || '').trim()
-  if (!phoneNumber) return
+  const openid = String(result.openid || '').trim()
+  const phoneNumber = String(result.phoneNumber || result.matchedPerson?.phone || '').trim()
+  if (!openid) return
   const accessGranted = hasWechatAccess(result)
   wx.setStorageSync(WECHAT_LOGIN_STORAGE_KEY, {
-    openid: phoneNumber,
-    unionid: '',
+    openid,
+    unionid: String(result.unionid || ''),
     phoneNumber,
     isSales: Boolean(result.isSales),
     canShareMiniProgram: Boolean(result.canShareMiniProgram),
@@ -278,15 +279,26 @@ function readCurrentShareKey(): string {
   }
 }
 
+function hasValidBinding(profile?: Partial<WechatTestResult> | null): boolean {
+  if (!profile?.binding?.salesOpenid) return false
+  if (!profile.salesPerson && !profile.binding.salesPersonId) return false
+  if (profile.binding.expired) return false
+  const authorizedUntil = String(profile.binding.authorizedUntil || '').trim()
+  if (!authorizedUntil) return true
+  const expireAt = new Date(authorizedUntil).getTime()
+  return Number.isFinite(expireAt) && expireAt > Date.now()
+}
+
 function hasWechatAccess(profile?: Partial<WechatTestResult> | null): boolean {
-  if (canWechatShare(profile) || profile?.accessGranted) return true
-  const role = String(profile?.matchedPerson?.role || '').trim()
-  return role === '销售' || role === '管理员'
+  if (!profile) return false
+  if (profile.canShareMiniProgram) return true
+  if (profile.matchedPerson) return true
+  return hasValidBinding(profile)
 }
 
 function showNoAccessToast(message?: string) {
   wx.showToast({
-    title: message || '请通过销售分享进入',
+    title: message || '请通过内部人员分享进入',
     icon: 'none',
   })
 }
@@ -328,8 +340,8 @@ Page({
       comeAuctioningCount: '--',
     },
     auctionStatLabels: {
-      auctioning: '正在拍卖',
-      coming: '即将拍卖',
+      auctioning: '',
+      coming: '',
     },
     wechatTestLoading: false,
     wechatTestError: '',
@@ -352,8 +364,9 @@ Page({
     sharedShareKey: '',
     currentShareKey: '',
     salesName: '',
-    showPhoneAuthDialog: false,
+    homeLabel: '',
     introText: '',
+    miniProgramAccessMode: 'strict',
   },
 
   onLoad(_query: Record<string, string>) {
@@ -373,6 +386,32 @@ Page({
       filterOptions: Object.assign({}, this.data.filterOptions, { area: districtList }),
       sharedShareKey,
     })
+
+    {
+      clearWechatLoginCache()
+      const cachedWechatLogin = null
+      if (false && cachedWechatLogin && this.hasCachedPhone(cachedWechatLogin)) {
+        this.applyWechatProfile(cachedWechatLogin, '已读取微信身份')
+      } else {
+        clearWechatLoginCache()
+        this.setData({
+          wechatTestStatusText: '正在获取微信身份',
+        })
+        void this.loginWechatAccess(sharedShareKey)
+      }
+
+      if (false && cachedWechatLogin && this.hasCachedPhone(cachedWechatLogin)) {
+        void this.loginWechatAccess(sharedShareKey)
+      }
+
+      this.loadAuctionStats()
+      this.loadBasicSettings()
+      if (cachedWechatLogin && hasWechatAccess(cachedWechatLogin)) this.refreshByFilter()
+      setTimeout(() => {
+        this.syncTabBarSelected()
+      }, 0)
+      return
+    }
 
     const cachedWechatLogin = readWechatLoginCache()
     if (cachedWechatLogin && this.hasCachedPhone(cachedWechatLogin)) {
@@ -402,21 +441,33 @@ Page({
   async loadBasicSettings() {
     try {
       const settings = await requestBasicSettings()
+      const homeLabel = String(settings.fapai_home_label || '').trim() || ''
+      const miniProgramAccessMode = String(settings.mini_program_access_mode || 'strict').trim().toLowerCase() === 'public'
+        ? 'public'
+        : 'strict'
       this.setData({
+        homeLabel,
         introText: String(settings.fapai_intro || '').trim(),
+        miniProgramAccessMode,
         auctionStatLabels: {
-          auctioning: String(settings.fapai_auctioning_label || '').trim() || '正在拍卖',
-          coming: String(settings.fapai_coming_label || '').trim() || '即将拍卖',
+          auctioning: String(settings.fapai_auctioning_label || '').trim() || '',
+          coming: String(settings.fapai_coming_label || '').trim() || '',
         },
       })
+      wx.setNavigationBarTitle({ title: homeLabel })
+      this.syncHomeTabLabel(homeLabel)
     } catch (error) {
       this.setData({
+        homeLabel: '',
         introText: '',
+        miniProgramAccessMode: 'strict',
         auctionStatLabels: {
-          auctioning: '正在拍卖',
-          coming: '即将拍卖',
+          auctioning: '',
+          coming: '',
         },
       })
+      wx.setNavigationBarTitle({ title: '' })
+      this.syncHomeTabLabel('')
     }
   },
 
@@ -427,23 +478,26 @@ Page({
       const profile = this.data.wechatTestResult
       if (this.hasCachedPhone(profile)) {
         void this.bindSalesOpenidIfNeeded(profile, false)
+      } else {
+        void this.loginWechatAccess(sharedShareKey)
       }
     }
     this.syncTabBarSelected()
+    this.syncHomeTabLabel()
     this.updateShareMenu()
-    this.updatePhoneAuthDialog(undefined, false)
+    return
   },
 
   buildWechatStatusText(profile: WechatTestResult) {
     if (profile.accessMessage) return profile.accessMessage
-    if (profile.canShareMiniProgram) return '销售身份已识别，可直接分享小程序'
-    if (profile.salesPerson?.name) return `已绑定销售：${profile.salesPerson.name}`
-    if (profile.binding?.salesOpenid) return '已绑定销售'
-    return '微信身份已获取，等待绑定销售'
+    if (profile.canShareMiniProgram) return '内部人员身份已识别，可直接分享小程序'
+    if (profile.salesPerson?.name) return `已绑定内部人员：${profile.salesPerson.name}`
+    if (profile.binding?.salesOpenid) return '已绑定内部人员'
+    return '微信身份已获取，等待绑定内部人员'
   },
 
   hasCachedPhone(profile?: Partial<WechatTestResult> | null) {
-    return Boolean(String(profile?.phoneNumber || profile?.matchedPerson?.phone || '').trim())
+    return Boolean(String(profile?.openid || '').trim())
   },
 
   updatePhoneAuthDialog(profile?: WechatTestResult, forceShow = false) {
@@ -467,8 +521,18 @@ Page({
     if (this.hasCachedPhone(this.data.wechatTestResult) || this.hasCachedPhone(readWechatLoginCache())) {
       return true
     }
-    this.promptPhoneAuth(statusText)
+    this.setData({
+      wechatTestStatusText: statusText || '正在获取微信身份',
+    })
+    void this.loginWechatAccess(String(this.data.sharedShareKey || '').trim())
     return false
+  },
+
+  resolveBlockedActionMessage(fallback?: string) {
+    if (!this.hasCachedPhone(this.data.wechatTestResult) && !this.hasCachedPhone(readWechatLoginCache())) {
+      return '正在识别微信身份，请稍候'
+    }
+    return fallback || this.data.wechatTestResult.accessMessage || '请联系内部人员'
   },
 
   applyWechatProfile(profile: WechatTestResult, statusText?: string) {
@@ -481,8 +545,8 @@ Page({
       wechatTestError: '',
       wechatTestResult: {
         phoneNumber: String(profile.phoneNumber || profile.matchedPerson?.phone || ''),
-        openid: String(profile.phoneNumber || profile.matchedPerson?.phone || profile.openid || ''),
-        unionid: '',
+        openid: String(profile.openid || ''),
+        unionid: String(profile.unionid || ''),
         isSales: Boolean(profile.isSales),
         canShareMiniProgram: Boolean(profile.canShareMiniProgram),
         accessGranted: hasAccess,
@@ -497,7 +561,6 @@ Page({
       wechatTestStatusText: statusText || this.buildWechatStatusText(profile),
       salesName,
     })
-    this.updatePhoneAuthDialog(profile)
     this.updateShareMenu()
     if (profile.share?.shareKey) {
       saveCurrentShareCache(profile.share)
@@ -516,12 +579,12 @@ Page({
   },
 
   async bootstrapWechatAccess(cachedProfile: WechatTestResult, shareKey: string) {
-    const phone = String(cachedProfile.phoneNumber || cachedProfile.openid || '').trim()
+    const phone = String(cachedProfile.openid || '').trim()
     let profile = cachedProfile
     try {
       if (phone) {
-        const refreshed = await requestPhoneProfile({
-          phoneNumber: phone,
+        const refreshed = await requestWechatProfile({
+          openid: phone,
           shareKey: shareKey || undefined,
         })
         profile = refreshed as WechatTestResult
@@ -538,16 +601,44 @@ Page({
     }, 0)
   },
 
+  async loginWechatAccess(shareKey?: string) {
+    try {
+      console.log('[wechat-login] start', { shareKey: shareKey || '' })
+      const loginResult = await new Promise<WechatMiniprogram.LoginSuccessCallbackResult>((resolve, reject) => {
+        wx.login({
+          success: resolve,
+          fail: reject,
+        })
+      })
+      const code = String(loginResult.code || '').trim()
+      if (!code) throw new Error('未获取到微信登录态')
+      const profile = await requestWechatLogin({
+        code,
+        shareKey: shareKey || undefined,
+      }) as WechatTestResult
+      this.applyWechatProfile(profile, this.buildWechatStatusText(profile))
+      await this.ensureCurrentShareKey(profile)
+      await this.bindSalesOpenidIfNeeded(profile, false)
+      this.loadAuctionStats()
+      if (hasWechatAccess(profile)) this.refreshByFilter()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '微信登录失败'
+      this.setData({
+        wechatTestError: message,
+        wechatTestStatusText: message,
+      })
+    }
+  },
+
   async bindSalesOpenidIfNeeded(profile: WechatTestResult, showToast = false) {
-    const currentPhone = String(profile.phoneNumber || profile.openid || '').trim()
+    const currentPhone = String(profile.openid || '').trim()
     const shareKey = String(this.data.sharedShareKey || '').trim()
     if (!currentPhone || !shareKey) return
     if (profile.canShareMiniProgram) return
-    const staffRole = String(profile.matchedPerson?.role || '').trim()
-    if (staffRole === '销售' || staffRole === '管理员') return
+    if (profile.matchedPerson) return
 
     const boundProfile = await requestBindSalesOpenid({
-      phoneNumber: currentPhone,
+      openid: currentPhone,
       shareKey,
     })
     this.applyWechatProfile(boundProfile, this.buildWechatStatusText(boundProfile))
@@ -555,18 +646,18 @@ Page({
       const title = boundProfile.shareAction === 'invalid'
         ? (boundProfile.accessMessage || '分享无效')
         : boundProfile.shareAction === 'expired'
-          ? (boundProfile.accessMessage || '分享已过期，请联系销售')
+          ? (boundProfile.accessMessage || '分享已过期，请联系内部人员')
         : boundProfile.shareAction === 'rebound'
           ? '已重新绑定销售'
           : boundProfile.shareAction === 'already_bound'
             ? '已在有效期内'
-            : '已绑定销售'
+            : '已绑定内部人员'
       wx.showToast({ title, icon: boundProfile.shareAction === 'invalid' || boundProfile.shareAction === 'expired' ? 'none' : 'success' })
     }
   },
 
   async ensureCurrentShareKey(profile: WechatTestResult) {
-    const currentPhone = String(profile.phoneNumber || profile.openid || '').trim()
+    const currentPhone = String(profile.openid || '').trim()
     if (!canWechatShare(profile) || !currentPhone) return ''
     if (profile.share?.shareKey) {
       saveCurrentShareCache(profile.share)
@@ -574,7 +665,7 @@ Page({
       return String(profile.share.shareKey || '')
     }
     try {
-      const share = await requestCreateWechatShare({ phoneNumber: currentPhone })
+      const share = await requestCreateWechatShare({ openid: currentPhone })
       saveCurrentShareCache(share)
       this.setData({ currentShareKey: String(share.shareKey || '') })
       return String(share.shareKey || '')
@@ -620,6 +711,11 @@ Page({
   syncTabBarSelected() {
     const tabBar = (this as any).getTabBar ? (this as any).getTabBar() : null
     if (tabBar && tabBar.setSelected) tabBar.setSelected(0)
+  },
+
+  syncHomeTabLabel(label?: string) {
+    const tabBar = (this as any).getTabBar ? (this as any).getTabBar() : null
+    if (tabBar && tabBar.setHomeLabel) tabBar.setHomeLabel(label || this.data.homeLabel || '')
   },
 
   refreshByFilter() {
@@ -709,12 +805,13 @@ Page({
   onHouseTap(e: WechatMiniprogram.CustomEvent<{ id: string | number }>) {
     if (!this.ensurePhoneAuth('请先授权手机号后再查看房源详情')) return
     if (!hasWechatAccess(this.data.wechatTestResult)) {
-      showNoAccessToast(this.data.wechatTestResult.accessMessage)
+      showNoAccessToast(this.resolveBlockedActionMessage(this.data.wechatTestResult.accessMessage))
       return
     }
     const id = Number(e.currentTarget.dataset.id)
     const sourceId = Number((e.currentTarget.dataset as { sourceid?: string | number }).sourceid || 0)
     if (!id) return
+    if (this.data.miniProgramAccessMode !== 'strict') return
     wx.navigateTo({
       url: `/pages/housedetail/index?id=${id}&sourceId=${sourceId || id}`,
     })
@@ -723,7 +820,7 @@ Page({
   onMapEntryTap() {
     if (!this.ensurePhoneAuth('请先授权手机号后再使用地图找房')) return
     if (!hasWechatAccess(this.data.wechatTestResult)) {
-      showNoAccessToast(this.data.wechatTestResult.accessMessage)
+      showNoAccessToast(this.resolveBlockedActionMessage(this.data.wechatTestResult.accessMessage))
       return
     }
     wx.navigateTo({
@@ -734,12 +831,14 @@ Page({
   onStatCardTap(e: WechatMiniprogram.CustomEvent<{ type: string | number }>) {
     if (!this.ensurePhoneAuth('请先授权手机号后再查看房源列表')) return
     if (!hasWechatAccess(this.data.wechatTestResult)) {
-      showNoAccessToast(this.data.wechatTestResult.accessMessage)
+      showNoAccessToast(this.resolveBlockedActionMessage(this.data.wechatTestResult.accessMessage))
       return
     }
     const type = Number(e.currentTarget.dataset.type || 1)
+    const auctioningLabel = encodeURIComponent(String(this.data.auctionStatLabels.auctioning || ''))
+    const comingLabel = encodeURIComponent(String(this.data.auctionStatLabels.coming || ''))
     wx.navigateTo({
-      url: `/pages/auctionlist/index?type=${type}&cityName=${encodeURIComponent(DEFAULT_CITY_NAME)}`,
+      url: `/pages/auctionlist/index?type=${type}&cityName=${encodeURIComponent(DEFAULT_CITY_NAME)}&auctioningLabel=${auctioningLabel}&comingLabel=${comingLabel}`,
     })
   },
 
@@ -773,14 +872,13 @@ Page({
   },
 
   async onBindStaffPhone(e: WechatMiniprogram.ButtonGetPhoneNumber) {
-    const code = String(e.detail?.code || '').trim()
+    let code = String(e.detail?.code || '').trim()
     if (!code) {
-      wx.showToast({ title: '需要授权手机号', icon: 'none' })
-      this.onRejectPhoneAuth()
+      wx.showToast({ title: '正在获取微信身份', icon: 'none' })
       return
     }
     try {
-      const profile = await requestBindStaffPhone({
+      const profile = await requestWechatLogin({
         code,
         shareKey: String(this.data.sharedShareKey || '').trim() || undefined,
       })
@@ -795,16 +893,16 @@ Page({
       const deniedTitle = shareAction === 'invalid'
         ? (this.data.wechatTestResult.accessMessage || '分享无效')
         : shareAction === 'expired'
-          ? (this.data.wechatTestResult.accessMessage || '分享已过期，请联系销售')
-          : (this.data.wechatTestResult.accessMessage || '请通过销售分享进入')
+          ? (this.data.wechatTestResult.accessMessage || '分享已过期，请联系内部人员')
+          : (this.data.wechatTestResult.accessMessage || '请通过内部人员分享进入')
       wx.showToast({
-        title: granted ? '手机号绑定成功' : deniedTitle,
+        title: granted ? '微信身份识别成功' : deniedTitle,
         icon: granted ? 'success' : 'none',
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : '手机号绑定失败'
       wx.showToast({ title: message, icon: 'none' })
-      if (message === '需要授权手机号') this.onRejectPhoneAuth()
+      if (message === '正在获取微信身份') return
     }
   },
 
@@ -826,7 +924,7 @@ Page({
     return {
       title,
       path: sharePath,
-      promise: requestCreateWechatShare({ phoneNumber: String(profile.phoneNumber || profile.openid || '') }).then((share) => {
+      promise: requestCreateWechatShare({ openid: String(profile.openid || '') }).then((share) => {
         saveCurrentShareCache(share)
         const freshShareKey = encodeURIComponent(String(share.shareKey || ''))
         return {
@@ -855,7 +953,7 @@ Page({
     return {
       title,
       query,
-      promise: requestCreateWechatShare({ phoneNumber: String(profile.phoneNumber || profile.openid || '') }).then((share) => {
+      promise: requestCreateWechatShare({ openid: String(profile.openid || '') }).then((share) => {
         saveCurrentShareCache(share)
         const freshShareKey = encodeURIComponent(String(share.shareKey || ''))
         return {

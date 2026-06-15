@@ -1,0 +1,76 @@
+.bind-page {
+  min-height: 100vh;
+  padding: 40rpx 28rpx;
+  background: linear-gradient(180deg, #f7f1e6 0%, #efe5d5 100%);
+}
+
+.bind-card {
+  padding: 40rpx 32rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 251, 245, 0.98);
+  box-shadow: 0 24rpx 60rpx rgba(66, 45, 24, 0.08);
+}
+
+.bind-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1f2430;
+}
+
+.bind-subtitle {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #6f7280;
+}
+
+.bind-loading,
+.bind-error,
+.bind-success {
+  margin-top: 28rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.bind-loading {
+  background: #f4ead8;
+  color: #6a5634;
+}
+
+.bind-error {
+  background: rgba(196, 63, 33, 0.12);
+  color: #b34024;
+}
+
+.bind-success {
+  background: rgba(34, 122, 68, 0.12);
+  color: #227a44;
+}
+
+.bind-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 26rpx 0;
+  border-bottom: 1rpx solid #eee4d4;
+}
+
+.bind-info-label {
+  font-size: 26rpx;
+  color: #6f7280;
+}
+
+.bind-info-value {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1f2430;
+  text-align: right;
+}
+
+.bind-primary-btn,
+.bind-secondary-btn {
+  margin-top: 32rpx;
+  border-radius: 999rpx;
+}

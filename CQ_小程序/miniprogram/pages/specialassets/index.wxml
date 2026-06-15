@@ -108,7 +108,7 @@
       <view class="load-more-tip" wx:if="{{canView && !hasMore && (feedLeft.length > 0 || feedRight.length > 0)}}">没有更多了</view>
     </view>
   </scroll-view>
-  <view class="phone-auth-mask" wx:if="{{showPhoneAuthDialog}}">
+  <view class="phone-auth-mask" wx:if="{{false}}">
     <view class="phone-auth-dialog">
       <text class="phone-auth-title">需要获取手机号</text>
       <text class="phone-auth-desc">授权手机号前，请先阅读并同意以下协议。</text>

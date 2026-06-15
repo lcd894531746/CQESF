@@ -4,6 +4,20 @@ export const WECHAT_LOGIN_STORAGE_KEY = 'wechat_login_result'
 const CURRENT_SHARE_STORAGE_KEY = 'current_wechat_share'
 let sessionShareKey = ''
 
+export function clearWechatSessionCache() {
+  sessionShareKey = ''
+  try {
+    wx.removeStorageSync(WECHAT_LOGIN_STORAGE_KEY)
+  } catch (error) {
+    console.warn('clear wechat login cache failed:', error)
+  }
+  try {
+    wx.removeStorageSync(CURRENT_SHARE_STORAGE_KEY)
+  } catch (error) {
+    console.warn('clear wechat share cache failed:', error)
+  }
+}
+
 function isInternalStaffRole(role?: string | null): boolean {
   const normalized = String(role || '').trim()
   return normalized === '销售' || normalized === '管理员'
@@ -11,8 +25,18 @@ function isInternalStaffRole(role?: string | null): boolean {
 
 export function canWechatShare(profile?: Partial<WechatLoginData> | null): boolean {
   if (!profile) return false
-  if (profile.canShareMiniProgram || profile.isSales) return true
-  return isInternalStaffRole(profile.matchedPerson?.role)
+  if (profile.canShareMiniProgram) return true
+  return Boolean(profile.matchedPerson)
+}
+
+function hasValidBinding(profile?: Partial<WechatLoginData> | null): boolean {
+  if (!profile?.binding?.salesOpenid) return false
+  if (!profile.salesPerson && !profile.binding.salesPersonId) return false
+  if (profile.binding.expired) return false
+  const authorizedUntil = String(profile.binding.authorizedUntil || '').trim()
+  if (!authorizedUntil) return true
+  const expireAt = new Date(authorizedUntil).getTime()
+  return Number.isFinite(expireAt) && expireAt > Date.now()
 }
 
 export function syncWechatShareMenu(profile?: Partial<WechatLoginData> | null) {
@@ -28,8 +52,10 @@ export function syncWechatShareMenu(profile?: Partial<WechatLoginData> | null) {
 }
 
 export function hasWechatAccess(profile?: Partial<WechatLoginData> | null): boolean {
-  if (canWechatShare(profile) || profile?.accessGranted) return true
-  return isInternalStaffRole(profile?.matchedPerson?.role)
+  if (!profile) return false
+  if (profile.canShareMiniProgram) return true
+  if (profile.matchedPerson) return true
+  return hasValidBinding(profile)
 }
 
 export function readWechatLoginCache(): WechatLoginData | null {
@@ -37,11 +63,12 @@ export function readWechatLoginCache(): WechatLoginData | null {
     const cached = wx.getStorageSync(WECHAT_LOGIN_STORAGE_KEY)
     if (!cached) return null
     const source = typeof cached === 'string' ? JSON.parse(cached) : cached
+    const openid = String(source?.openid || '').trim()
     const phoneNumber = String(source?.phoneNumber || source?.matchedPerson?.phone || '').trim()
-    if (!phoneNumber) return null
+    if (!openid) return null
     const profile = Object.assign({}, source, {
-      openid: phoneNumber,
-      unionid: '',
+      openid,
+      unionid: String(source?.unionid || '').trim(),
       phoneNumber,
     }) as WechatLoginData
     profile.accessGranted = hasWechatAccess(profile)
@@ -95,12 +122,13 @@ export function readWechatAccessShareKey(): string {
 }
 
 export function saveWechatLoginCache(profile: WechatLoginData) {
-  const phoneNumber = String(profile.phoneNumber || profile.matchedPerson?.phone || profile.openid || '').trim()
-  if (!phoneNumber) return
+  const openid = String(profile.openid || '').trim()
+  const phoneNumber = String(profile.phoneNumber || profile.matchedPerson?.phone || '').trim()
+  if (!openid) return
   rememberWechatShareKey(profile.share?.shareKey || profile.binding?.shareKey)
   wx.setStorageSync(WECHAT_LOGIN_STORAGE_KEY, Object.assign({}, profile, {
-    openid: phoneNumber,
-    unionid: '',
+    openid,
+    unionid: String(profile.unionid || '').trim(),
     phoneNumber,
     accessGranted: hasWechatAccess(profile),
   }))
@@ -139,14 +167,14 @@ export function showNoAccessToast(message?: string) {
   let title = message || ''
   if (!title) {
     const profile = readWechatLoginCache()
-    title = profile?.accessMessage || '请通过销售分享进入'
+    title = profile?.accessMessage || '请通过内部人员分享进入'
   }
   wx.showToast({ title, icon: 'none' })
 }
 
 export function buildAccessToastTitle(profile: Partial<WechatLoginData>, granted: boolean): string {
-  if (granted) return '手机号绑定成功'
+  if (granted) return '微信身份识别成功'
   if (profile.shareAction === 'invalid') return profile.accessMessage || '分享无效'
-  if (profile.shareAction === 'expired') return profile.accessMessage || '分享已过期，请联系销售'
-  return profile.accessMessage || '请通过销售分享进入'
+  if (profile.shareAction === 'expired') return profile.accessMessage || '分享已过期，请联系内部人员'
+  return profile.accessMessage || '请通过内部人员分享进入'
 }

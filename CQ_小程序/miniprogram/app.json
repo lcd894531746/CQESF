@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/bind-staff/index",
     "pages/ershou/index",
     "pages/specialassets/index",
     "pages/agreement/index",
@@ -30,7 +31,7 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "法拍房"
+        "text": ""
       },
       {
         "pagePath": "pages/ershou/index",

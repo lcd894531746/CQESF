@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getRoleLabel, isAdmin, ROLE_ADMIN, ROLE_REVIEWER, ROLE_UPLOADER, ROLE_SALES } from '../constants/auth'
 import apiRequest from '../utils/request'
@@ -7,6 +7,9 @@ const loading = ref(false)
 const people = ref([])
 const peopleDialogVisible = ref(false)
 const passwordDialogVisible = ref(false)
+const bindDialogVisible = ref(false)
+const bindDialogLoading = ref(false)
+
 const roleOptions = [
   { label: '管理员（1级）', value: ROLE_ADMIN },
   { label: '审核员（2级）', value: ROLE_REVIEWER },
@@ -18,6 +21,7 @@ const message = reactive({
   type: '',
   text: '',
 })
+
 const peopleForm = reactive({
   id: null,
   name: '',
@@ -26,11 +30,19 @@ const peopleForm = reactive({
   status: 1,
   remark: '',
 })
+
 const passwordForm = reactive({
   personId: null,
   personName: '',
   password: '',
   confirmPassword: '',
+})
+
+const bindDialogState = reactive({
+  staffId: null,
+  staffName: '',
+  qrCodeUrl: '',
+  expiresAt: '',
 })
 
 const isEditingPerson = computed(() => Boolean(peopleForm.id))
@@ -109,6 +121,72 @@ function closePasswordDialog() {
   passwordForm.personName = ''
   passwordForm.password = ''
   passwordForm.confirmPassword = ''
+}
+
+function closeBindDialog() {
+  bindDialogVisible.value = false
+  bindDialogState.staffId = null
+  bindDialogState.staffName = ''
+  bindDialogState.qrCodeUrl = ''
+  bindDialogState.expiresAt = ''
+}
+
+function getBindStatusMeta(person) {
+  if (person.wechat_openid) return { text: '已绑定', className: 'status-approved' }
+  if (person.bind_status === 'pending') return { text: '待绑定', className: 'status-pending' }
+  if (person.bind_status === 'expired') return { text: '已过期', className: 'status-rejected' }
+  if (person.bind_status === 'used') return { text: '已绑定', className: 'status-approved' }
+  return { text: '未绑定', className: '' }
+}
+
+async function openBindDialog(person) {
+  if (!isAdmin()) {
+    showMessage('error', '暂无操作权限')
+    return
+  }
+
+  bindDialogLoading.value = true
+  try {
+    const result = await requestData(`/system-staff/${person.id}/wechat-bind-request`, {
+      method: 'post',
+      data: { staffId: person.id },
+    })
+    bindDialogState.staffId = person.id
+    bindDialogState.staffName = person.name
+    bindDialogState.qrCodeUrl = result.data?.bindRequest?.qrCodeUrl || ''
+    bindDialogState.expiresAt = result.data?.bindRequest?.expiresAt || ''
+    bindDialogVisible.value = true
+    showMessage('success', '绑定码已生成')
+    await loadPeople()
+  } catch (error) {
+    showMessage('error', error.response?.data?.message || '生成绑定码失败')
+  } finally {
+    bindDialogLoading.value = false
+  }
+}
+
+async function unbindWechat(person) {
+  if (!isAdmin()) {
+    showMessage('error', '暂无操作权限')
+    return
+  }
+
+  if (!window.confirm(`确认解除 ${person.name} 的微信绑定吗？`)) {
+    return
+  }
+
+  bindDialogLoading.value = true
+  try {
+    await requestData(`/system-staff/${person.id}/wechat-bind`, {
+      method: 'delete',
+    })
+    showMessage('success', '微信绑定已解除')
+    await loadPeople()
+  } catch (error) {
+    showMessage('error', error.response?.data?.message || '解除绑定失败')
+  } finally {
+    bindDialogLoading.value = false
+  }
 }
 
 async function savePerson() {
@@ -214,9 +292,10 @@ onMounted(async () => {
             <tr>
               <th>姓名</th>
               <th>手机号</th>
-              <th>OpenID</th>
               <th>角色</th>
               <th>状态</th>
+              <th>绑定状态</th>
+              <th>OpenID</th>
               <th>备注</th>
               <th>操作</th>
             </tr>
@@ -225,18 +304,42 @@ onMounted(async () => {
             <tr v-for="person in people" :key="person.id">
               <td>{{ person.name }}</td>
               <td>{{ person.phone }}</td>
-              <td>{{ person.wechat_openid || '-' }}</td>
               <td>{{ getRoleLabel(person.role) }}</td>
               <td>{{ person.status === 1 ? '在职' : '停用' }}</td>
+              <td>
+                <span :class="['status-pill', getBindStatusMeta(person).className]">
+                  {{ getBindStatusMeta(person).text }}
+                </span>
+              </td>
+              <td>{{ person.wechat_openid || '-' }}</td>
               <td>{{ person.remark || '-' }}</td>
               <td class="inline-actions">
+                <button
+                  v-permission="'admin'"
+                  class="mini"
+                  type="button"
+                  :disabled="bindDialogLoading"
+                  @click="openBindDialog(person)"
+                >
+                  {{ person.wechat_openid ? '重新绑定' : '生成绑定码' }}
+                </button>
+                <button
+                  v-if="person.wechat_openid"
+                  v-permission="'admin'"
+                  class="mini danger"
+                  type="button"
+                  :disabled="bindDialogLoading"
+                  @click="unbindWechat(person)"
+                >
+                  解除绑定
+                </button>
                 <button v-permission="'admin'" class="mini" type="button" @click="openEditPerson(person)">编辑</button>
                 <button v-permission="'admin'" class="mini" type="button" @click="openPasswordDialog(person)">改密码</button>
                 <button v-permission="'admin'" class="mini danger" type="button" @click="deletePerson(person.id)">删除</button>
               </td>
             </tr>
             <tr v-if="!loading && people.length === 0">
-              <td colspan="7" class="empty-cell">暂无人员数据</td>
+              <td colspan="8" class="empty-cell">暂无人员数据</td>
             </tr>
           </tbody>
         </table>
@@ -304,6 +407,32 @@ onMounted(async () => {
           <button class="ghost" type="button" @click="closePasswordDialog">取消</button>
         </div>
       </form>
+    </div>
+
+    <div v-if="bindDialogVisible" class="modal-mask">
+      <div class="card modal-card bind-modal-card">
+        <div class="modal-title-row">
+          <h3>员工微信绑定</h3>
+          <button class="modal-close-btn" type="button" aria-label="关闭弹窗" @click="closeBindDialog">×</button>
+        </div>
+        <p class="modal-subtitle">请让 {{ bindDialogState.staffName }} 使用微信扫一扫下方二维码，1分钟内完成绑定。</p>
+        <div class="bind-qr-wrap">
+          <img v-if="bindDialogState.qrCodeUrl" :src="bindDialogState.qrCodeUrl" alt="绑定二维码" class="bind-qr-image" />
+          <p v-else class="empty-cell">二维码生成失败，请重试</p>
+        </div>
+        <p v-if="bindDialogState.expiresAt" class="bind-expire-text">有效期至：{{ bindDialogState.expiresAt }}</p>
+        <div class="actions">
+          <button
+            class="primary"
+            type="button"
+            :disabled="bindDialogLoading || !bindDialogState.staffId"
+            @click="openBindDialog({ id: bindDialogState.staffId, name: bindDialogState.staffName })"
+          >
+            重新生成
+          </button>
+          <button class="ghost" type="button" @click="closeBindDialog">关闭</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

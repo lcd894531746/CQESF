@@ -94,10 +94,10 @@ function withWechatShareKey<T extends Record<string, unknown>>(data?: T): T & { 
 
 function wechatShareHeader(): Record<string, string> {
   const shareKey = readWechatAccessShareKey()
-  const phoneNumber = String(readWechatLoginCache()?.phoneNumber || '').trim()
+  const openid = String(readWechatLoginCache()?.openid || '').trim()
   const header: Record<string, string> = {}
   if (shareKey) header['x-share-key'] = shareKey
-  if (phoneNumber) header['x-phone-number'] = phoneNumber
+  if (openid) header['x-wechat-openid'] = openid
   return header
 }
 
@@ -242,6 +242,7 @@ export type BasicSettingsData = {
   interest_rate?: number
   fapai_intro?: string
   low_down_payment_intro?: string
+  fapai_home_label?: string
   fapai_auctioning_label?: string
   fapai_coming_label?: string
   mini_program_access_mode?: 'strict' | 'public' | string
@@ -328,6 +329,20 @@ export type WechatLoginData = {
   share?: WechatShareData | null
 }
 
+export type StaffWechatBindRequestData = {
+  bindRequest?: {
+    id?: number
+    bindToken?: string
+    status?: string
+    expiresAt?: string
+  } | null
+  staff?: {
+    id?: number
+    name?: string
+    role?: string
+  } | null
+}
+
 export type WechatBindSalesOpenidData = WechatLoginData
 
 export type WechatShareData = {
@@ -369,6 +384,23 @@ type WechatBindStaffPhoneResponse = {
   success?: boolean
   data?: WechatLoginData & {
     phoneNumber?: string
+  }
+  message?: string
+  error?: string
+}
+
+type StaffWechatBindRequestResponse = {
+  success?: boolean
+  data?: StaffWechatBindRequestData
+  message?: string
+  error?: string
+}
+
+type StaffWechatBindConfirmResponse = {
+  success?: boolean
+  data?: {
+    profile?: WechatLoginData
+    staff?: WechatLoginData['matchedPerson']
   }
   message?: string
   error?: string
@@ -1404,7 +1436,7 @@ export function requestBasicSettings(): Promise<BasicSettingsData> {
 }
 
 export function requestCreateWechatShare(params: {
-  phoneNumber: string
+  openid: string
 }): Promise<WechatShareData> {
   return new Promise((resolve, reject) => {
     wx.request({
@@ -1428,7 +1460,7 @@ export function requestCreateWechatShare(params: {
 }
 
 export function requestBindSalesOpenid(params: {
-  phoneNumber: string
+  openid: string
   shareKey: string
   unionid?: string
 }): Promise<WechatBindSalesOpenidData> {
@@ -1442,7 +1474,7 @@ export function requestBindSalesOpenid(params: {
       data: params,
       success: (res) => {
         const responseData = (res.data || {}) as WechatBindSalesOpenidResponse
-        if (!responseData.success || !responseData.data?.phoneNumber) {
+        if (!responseData.success || !responseData.data?.openid) {
           reject(new Error(responseData.message || responseData.error || 'API_CODE_ERROR'))
           return
         }
@@ -1453,13 +1485,13 @@ export function requestBindSalesOpenid(params: {
   })
 }
 
-export function requestPhoneProfile(params: {
-  phoneNumber: string
+export function requestWechatProfile(params: {
+  openid: string
   shareKey?: string
 }): Promise<WechatLoginData> {
   return new Promise((resolve, reject) => {
     wx.request({
-      url: `${BK_API_BASE_URL}/api/wechat/phone-profile`,
+      url: `${BK_API_BASE_URL}/api/wechat/profile`,
       method: 'POST',
       header: {
         'content-type': 'application/json',
@@ -1467,7 +1499,7 @@ export function requestPhoneProfile(params: {
       data: params,
       success: (res) => {
         const responseData = (res.data || {}) as WechatBindStaffPhoneResponse
-        if (!responseData.success || !responseData.data?.phoneNumber) {
+        if (!responseData.success || !responseData.data?.openid) {
           reject(new Error(responseData.message || responseData.error || 'API_CODE_ERROR'))
           return
         }
@@ -1478,15 +1510,13 @@ export function requestPhoneProfile(params: {
   })
 }
 
-export function requestBindStaffPhone(params: {
-  openid?: string
+export function requestWechatLogin(params: {
   code: string
-  unionid?: string
   shareKey?: string
 }): Promise<WechatLoginData> {
   return new Promise((resolve, reject) => {
     wx.request({
-      url: `${BK_API_BASE_URL}/api/wechat/bind-staff-phone`,
+      url: `${BK_API_BASE_URL}/api/wechat/login`,
       method: 'POST',
       header: {
         'content-type': 'application/json',
@@ -1494,11 +1524,59 @@ export function requestBindStaffPhone(params: {
       data: params,
       success: (res) => {
         const responseData = (res.data || {}) as WechatBindStaffPhoneResponse
-        if (!responseData.success || !responseData.data?.phoneNumber) {
+        if (!responseData.success || !responseData.data?.openid) {
           reject(new Error(responseData.message || responseData.error || 'API_CODE_ERROR'))
           return
         }
         resolve(responseData.data)
+      },
+      fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
+    })
+  })
+}
+
+export function requestStaffWechatBindRequest(params: {
+  bindToken: string
+}): Promise<StaffWechatBindRequestData> {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: `${BK_API_BASE_URL}/api/wechat/staff-bind-request`,
+      method: 'GET',
+      data: {
+        bindToken: params.bindToken,
+      },
+      success: (res) => {
+        const responseData = (res.data || {}) as StaffWechatBindRequestResponse
+        if (!responseData.success || !responseData.data?.bindRequest) {
+          reject(new Error(responseData.message || responseData.error || 'API_CODE_ERROR'))
+          return
+        }
+        resolve(responseData.data)
+      },
+      fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
+    })
+  })
+}
+
+export function requestConfirmStaffWechatBinding(params: {
+  bindToken: string
+  code: string
+}): Promise<WechatLoginData> {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: `${BK_API_BASE_URL}/api/wechat/staff-bind-request/confirm`,
+      method: 'POST',
+      header: {
+        'content-type': 'application/json',
+      },
+      data: params,
+      success: (res) => {
+        const responseData = (res.data || {}) as StaffWechatBindConfirmResponse
+        if (!responseData.success || !responseData.data?.profile?.openid) {
+          reject(new Error(responseData.message || responseData.error || 'API_CODE_ERROR'))
+          return
+        }
+        resolve(responseData.data.profile)
       },
       fail: (err) => reject(new Error((err && (err as any).errMsg) || 'NETWORK_FAIL')),
     })

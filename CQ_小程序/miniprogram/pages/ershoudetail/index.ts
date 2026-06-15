@@ -1,4 +1,4 @@
-import { requestErshouDetailById, requestPhoneProfile } from '../../services/house'
+import { requestErshouDetailById, requestWechatProfile } from '../../services/house'
 import { cleanYinshanImageUrls } from '../../utils/clean-image'
 import { canWechatShare, hasWechatAccess, readWechatLoginCache, rememberWechatShareKey, syncWechatShareMenu } from '../../utils/wechat-access'
 
@@ -367,7 +367,7 @@ Page({
     if (!canViewErshouDetail()) {
       wx.showModal({
         title: '暂无权限',
-        content: '请联系销售授权后查看详情。',
+        content: '请联系内部人员授权后查看详情。',
         showCancel: false,
         success: () => {
           wx.switchTab({ url: '/pages/ershou/index' })
@@ -418,12 +418,12 @@ Page({
   },
   async resolveWechatContact() {
     const cachedProfile = readWechatLoginCache()
-    const phoneNumber = String(cachedProfile?.phoneNumber || cachedProfile?.matchedPerson?.phone || '').trim()
-    if (!phoneNumber) return buildContactFromWechatProfile(cachedProfile)
+    const openid = String(cachedProfile?.openid || '').trim()
+    if (!openid) return buildContactFromWechatProfile(cachedProfile)
 
     try {
-      const profile = await requestPhoneProfile({
-        phoneNumber,
+      const profile = await requestWechatProfile({
+        openid,
         shareKey: resolvePhoneProfileShareKey(cachedProfile) || undefined,
       })
       return buildContactFromWechatProfile(profile)

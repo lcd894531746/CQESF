@@ -1,4 +1,4 @@
-import { requestPhoneProfile, requestSpecialAssetDetail } from '../../services/house'
+import { requestWechatProfile, requestSpecialAssetDetail } from '../../services/house'
 import { canWechatShare, hasWechatAccess, readWechatLoginCache, readWechatAccessShareKey, rememberWechatShareKey } from '../../utils/wechat-access'
 
 type SpecialAssetRow = import('../../services/house').SpecialAssetRow
@@ -198,7 +198,7 @@ Page({
     if (!canViewDetail()) {
       wx.showModal({
         title: '暂无查看权限',
-        content: '请联系销售人员授权后查看详情。',
+        content: '请联系内部人员授权后查看详情。',
         showCancel: false,
         success: () => {
           wx.switchTab({ url: '/pages/specialassets/index' })
@@ -230,12 +230,12 @@ Page({
   },
   async resolveWechatContact() {
     const cachedProfile = readWechatLoginCache()
-    const phoneNumber = String(cachedProfile?.phoneNumber || cachedProfile?.matchedPerson?.phone || '').trim()
-    if (!phoneNumber) return buildContactFromWechatProfile(cachedProfile)
+    const openid = String(cachedProfile?.openid || '').trim()
+    if (!openid) return buildContactFromWechatProfile(cachedProfile)
 
     try {
-      const profile = await requestPhoneProfile({
-        phoneNumber,
+      const profile = await requestWechatProfile({
+        openid,
         shareKey: resolvePhoneProfileShareKey(cachedProfile) || undefined,
       })
       return buildContactFromWechatProfile(profile)

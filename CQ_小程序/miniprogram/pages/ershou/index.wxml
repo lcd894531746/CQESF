@@ -209,7 +209,7 @@
     </view>
   </scroll-view>
 
-  <view class="phone-auth-mask" wx:if="{{showPhoneAuthDialog}}">
+  <view class="phone-auth-mask" wx:if="{{false}}">
     <view class="phone-auth-dialog">
       <text class="phone-auth-title">需要先获取手机号</text>
       <text class="phone-auth-desc">低首付房源需要销售授权后查看</text>

@@ -776,6 +776,11 @@ page {
   line-height: 34rpx;
 }
 
+.empty-state-guide {
+  border-color: #d9e8ff;
+  box-shadow: 0 16rpx 36rpx rgba(31, 125, 255, 0.08);
+}
+
 .load-more-tip {
   text-align: center;
   color: #9aa0ab;

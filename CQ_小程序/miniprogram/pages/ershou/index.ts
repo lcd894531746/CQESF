@@ -3,10 +3,10 @@ import { canWechatShare, consumeShareParams, hasWechatAccess, syncWechatShareMen
 import {
   requestBasicSettings,
   requestBindSalesOpenid,
-  requestBindStaffPhone,
   requestCreateWechatShare,
   requestErshouListings,
-  requestPhoneProfile,
+  requestWechatLogin,
+  requestWechatProfile,
 } from '../../services/house'
 import { cleanYinshanImageUrl, cleanYinshanImageUrls } from '../../utils/clean-image'
 
@@ -91,10 +91,11 @@ function readWechatLoginCache(): WechatLoginProfile | null {
     const cached = wx.getStorageSync(WECHAT_LOGIN_STORAGE_KEY)
     if (!cached) return null
     const source = typeof cached === 'string' ? JSON.parse(cached) : cached
+    const openid = String(source?.openid || '').trim()
     const phoneNumber = String(source?.phoneNumber || source?.matchedPerson?.phone || '').trim()
-    if (!phoneNumber) return null
+    if (!openid) return null
     return {
-      openid: phoneNumber,
+      openid,
       unionid: String(source?.unionid || '').trim(),
       phoneNumber,
       isSales: Boolean(source?.isSales),
@@ -115,11 +116,12 @@ function readWechatLoginCache(): WechatLoginProfile | null {
 }
 
 function saveWechatLoginCache(profile: WechatLoginProfile) {
-  const phoneNumber = String(profile.phoneNumber || profile.matchedPerson?.phone || profile.openid || '').trim()
-  if (!phoneNumber) return
+  const openid = String(profile.openid || '').trim()
+  const phoneNumber = String(profile.phoneNumber || profile.matchedPerson?.phone || '').trim()
+  if (!openid) return
   wx.setStorageSync(WECHAT_LOGIN_STORAGE_KEY, Object.assign({}, profile, {
-    openid: phoneNumber,
-    unionid: '',
+    openid,
+    unionid: String(profile.unionid || ''),
     phoneNumber,
     accessGranted: hasWechatAccess(profile),
   }))
@@ -153,6 +155,16 @@ function readCurrentShareKey(): string {
     console.warn('read current share key failed:', error)
     return ''
   }
+}
+
+function hasValidBinding(profile?: Partial<WechatLoginProfile> | null): boolean {
+  if (!profile?.binding?.salesOpenid) return false
+  if (!profile.salesPerson && !profile.binding.salesPersonId) return false
+  if (profile.binding.expired) return false
+  const authorizedUntil = String(profile.binding.authorizedUntil || '').trim()
+  if (!authorizedUntil) return true
+  const expireAt = new Date(authorizedUntil).getTime()
+  return Number.isFinite(expireAt) && expireAt > Date.now()
 }
 
 function showNoAccessToast(message?: string) {
@@ -519,7 +531,6 @@ Page({
     currentShareKey: '',
     showOpenidCard: false,
     annualInterestRate: DEFAULT_ANNUAL_INTEREST_RATE,
-    showPhoneAuthDialog: false,
     introText: '',
   },
   onLoad(query: Record<string, string>) {
@@ -532,6 +543,28 @@ Page({
     if (routeDistrictIndex > 0) this.setData({ 'filterIndex.area': routeDistrictIndex })
     const { shareKey: sharedShareKey } = consumeShareParams(routeOptions)
     this.setData({ sharedShareKey })
+
+    {
+      clearWechatLoginCache()
+      const cachedWechatLogin = null
+      if (false && cachedWechatLogin && this.hasCachedPhone(cachedWechatLogin)) {
+        this.applyWechatProfile(cachedWechatLogin, '已读取微信身份')
+        void this.refreshWechatProfile(cachedWechatLogin).then((nextProfile) => {
+          void this.bindSalesOpenidIfNeeded(nextProfile)
+        })
+      } else {
+        clearWechatLoginCache()
+        this.setData({
+          wechatLoginStatusText: '正在获取微信身份',
+        })
+        void this.loginWechatAccess(sharedShareKey)
+      }
+
+      this.loadBasicSettings().finally(() => {
+        if (cachedWechatLogin && hasWechatAccess(cachedWechatLogin)) this.refreshByFilter()
+      })
+      return
+    }
 
     const cachedWechatLogin = readWechatLoginCache()
     if (cachedWechatLogin && this.hasCachedPhone(cachedWechatLogin)) {
@@ -553,7 +586,7 @@ Page({
     })
   },
   onShow() {
-    const cachedWechatLogin = readWechatLoginCache()
+    const cachedWechatLogin = null
     const currentHasAccess = hasWechatAccess(this.data.wechatLoginResult)
     if (cachedWechatLogin && this.hasCachedPhone(cachedWechatLogin)) {
       this.applyWechatProfile(cachedWechatLogin, this.buildWechatStatusText(cachedWechatLogin))
@@ -578,22 +611,47 @@ Page({
         void this.refreshWechatProfile(profile).then((nextProfile) => {
           void this.bindSalesOpenidIfNeeded(nextProfile)
         })
+      } else {
+        void this.loginWechatAccess(sharedShareKey)
       }
     }
     const tabBar = (this as any).getTabBar ? (this as any).getTabBar() : null
     if (tabBar && tabBar.setSelected) tabBar.setSelected(1)
     this.updateShareMenu()
-    this.updatePhoneAuthDialog(undefined, false)
+    return
   },
   buildWechatStatusText(profile: WechatLoginProfile) {
     if (profile.accessMessage) return profile.accessMessage
-    if (profile.canShareMiniProgram) return '销售身份已识别，可直接分享'
-    if (profile.salesPerson?.name) return `已绑定销售：${profile.salesPerson.name}`
-    if (profile.binding?.salesOpenid) return '已绑定销售'
-    return '微信身份已获取，等待绑定销售'
+    if (profile.canShareMiniProgram) return '内部人员身份已识别，可直接分享'
+    if (profile.salesPerson?.name) return `已绑定内部人员：${profile.salesPerson.name}`
+    if (profile.binding?.salesOpenid) return '已绑定内部人员'
+    return '微信身份已获取，等待绑定内部人员'
+  },
+  async loginWechatAccess(shareKey?: string) {
+    try {
+      const loginResult = await new Promise<WechatMiniprogram.LoginSuccessCallbackResult>((resolve, reject) => {
+        wx.login({
+          success: resolve,
+          fail: reject,
+        })
+      })
+      const code = String(loginResult.code || '').trim()
+      if (!code) throw new Error('寰俊鐧诲綍澶辫触')
+      const profile = await requestWechatLogin({
+        code,
+        shareKey: shareKey || undefined,
+      })
+      this.applyWechatProfile(profile, this.buildWechatStatusText(profile))
+      await this.ensureCurrentShareKey(profile)
+      await this.bindSalesOpenidIfNeeded(profile)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '寰俊鐧诲綍澶辫触'
+      this.setData({ wechatLoginStatusText: message })
+      wx.showToast({ title: message, icon: 'none' })
+    }
   },
   hasCachedPhone(profile?: Partial<WechatLoginProfile> | null) {
-    return Boolean(String(profile?.phoneNumber || profile?.matchedPerson?.phone || '').trim())
+    return Boolean(String(profile?.openid || '').trim())
   },
   updatePhoneAuthDialog(profile?: WechatLoginProfile, forceShow = false) {
     const dataProfile = this.data.wechatLoginResult
@@ -614,7 +672,10 @@ Page({
     if (this.hasCachedPhone(this.data.wechatLoginResult) || this.hasCachedPhone(readWechatLoginCache())) {
       return true
     }
-    this.promptPhoneAuth(statusText)
+    this.setData({
+      wechatLoginStatusText: statusText || '正在获取微信身份',
+    })
+    void this.loginWechatAccess(String(this.data.sharedShareKey || '').trim())
     return false
   },
   applyWechatProfile(profile: WechatLoginProfile, statusText?: string) {
@@ -624,8 +685,8 @@ Page({
     this.setData({
       wechatLoginResult: {
         phoneNumber: String(profile.phoneNumber || profile.matchedPerson?.phone || ''),
-        openid: String(profile.phoneNumber || profile.matchedPerson?.phone || profile.openid || ''),
-        unionid: '',
+        openid: String(profile.openid || ''),
+        unionid: String(profile.unionid || ''),
         isSales: Boolean(profile.isSales),
         canShareMiniProgram: Boolean(profile.canShareMiniProgram),
         accessGranted: hasAccess,
@@ -639,7 +700,6 @@ Page({
       },
       wechatLoginStatusText: statusText || this.buildWechatStatusText(profile),
     })
-    this.updatePhoneAuthDialog(profile)
     this.updateShareMenu()
     if (profile.share?.shareKey) {
       saveCurrentShareCache(profile.share)
@@ -657,11 +717,11 @@ Page({
     }
   },
   async refreshWechatProfile(profile: WechatLoginProfile) {
-    const currentPhone = String(profile.phoneNumber || profile.openid || '').trim()
+    const currentPhone = String(profile.openid || '').trim()
     if (!currentPhone) return profile
     try {
-      const refreshedProfile = await requestPhoneProfile({
-        phoneNumber: currentPhone,
+      const refreshedProfile = await requestWechatProfile({
+        openid: currentPhone,
         shareKey: String(this.data.sharedShareKey || '').trim() || undefined,
       })
       this.applyWechatProfile(refreshedProfile, this.buildWechatStatusText(refreshedProfile))
@@ -672,12 +732,12 @@ Page({
     }
   },
   async bindSalesOpenidIfNeeded(profile: WechatLoginProfile) {
-    const currentPhone = String(profile.phoneNumber || profile.openid || '').trim()
+    const currentPhone = String(profile.openid || '').trim()
     const shareKey = String(this.data.sharedShareKey || '').trim()
-    if (!currentPhone || !shareKey || profile.canShareMiniProgram) return
+    if (!currentPhone || !shareKey || profile.canShareMiniProgram || profile.matchedPerson || hasValidBinding(profile)) return
     try {
       const boundProfile = await requestBindSalesOpenid({
-        phoneNumber: currentPhone,
+        openid: currentPhone,
         shareKey,
       })
       this.applyWechatProfile(boundProfile, this.buildWechatStatusText(boundProfile))
@@ -686,7 +746,7 @@ Page({
     }
   },
   async ensureCurrentShareKey(profile: WechatLoginProfile) {
-    const currentPhone = String(profile.phoneNumber || profile.openid || '').trim()
+    const currentPhone = String(profile.openid || '').trim()
     if (!canWechatShare(profile) || !currentPhone) return ''
     if (profile.share?.shareKey) {
       saveCurrentShareCache(profile.share)
@@ -694,7 +754,7 @@ Page({
       return String(profile.share.shareKey || '')
     }
     try {
-      const share = await requestCreateWechatShare({ phoneNumber: currentPhone })
+      const share = await requestCreateWechatShare({ openid: currentPhone })
       saveCurrentShareCache(share)
       this.setData({ currentShareKey: String(share.shareKey || '') })
       return String(share.shareKey || '')
@@ -718,12 +778,11 @@ Page({
   async onBindStaffPhone(e: WechatMiniprogram.ButtonGetPhoneNumber) {
     const code = String(e.detail?.code || '').trim()
     if (!code) {
-      wx.showToast({ title: '需要授权手机号', icon: 'none' })
-      this.onRejectPhoneAuth()
+      wx.showToast({ title: '正在获取微信身份', icon: 'none' })
       return
     }
     try {
-      const profile = await requestBindStaffPhone({
+      const profile = await requestWechatLogin({
         code,
         shareKey: String(this.data.sharedShareKey || '').trim() || undefined,
       })
@@ -734,7 +793,7 @@ Page({
         this.refreshByFilter()
       })
       wx.showToast({
-        title: hasWechatAccess(this.data.wechatLoginResult) ? '手机号绑定成功' : '暂无权限',
+        title: hasWechatAccess(this.data.wechatLoginResult) ? '微信身份识别成功' : '暂无权限',
         icon: hasWechatAccess(this.data.wechatLoginResult) ? 'success' : 'none',
       })
     } catch (error) {
@@ -964,7 +1023,7 @@ Page({
     return {
       title,
       path: sharePath,
-      promise: requestCreateWechatShare({ phoneNumber: String(profile.phoneNumber || profile.openid || '') }).then((share) => {
+      promise: requestCreateWechatShare({ openid: String(profile.openid || '') }).then((share) => {
         saveCurrentShareCache(share)
         const freshShareKey = encodeURIComponent(String(share.shareKey || ''))
         return {
@@ -988,7 +1047,7 @@ Page({
     return {
       title,
       query,
-      promise: requestCreateWechatShare({ phoneNumber: String(profile.phoneNumber || profile.openid || '') }).then((share) => {
+      promise: requestCreateWechatShare({ openid: String(profile.openid || '') }).then((share) => {
         saveCurrentShareCache(share)
         const freshShareKey = encodeURIComponent(String(share.shareKey || ''))
         return {

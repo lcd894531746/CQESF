@@ -1,4 +1,4 @@
-import { requestHouseList, requestHouseTypeList } from '../../services/house'
+import { requestBasicSettings, requestHouseList, requestHouseTypeList } from '../../services/house'
 import { parseAreaRange, parsePriceRange } from '../../utils/house-filters.js'
 import { cleanYinshanImageUrl } from '../../utils/clean-image'
 import { canWechatShare, hasWechatAccess as checkWechatAccess, readWechatLoginCache, showNoAccessToast, syncWechatShareMenu } from '../../utils/wechat-access'
@@ -46,6 +46,11 @@ type WechatShareProfile = {
   } | null
 }
 
+type TitleLabels = {
+  auctioning: string
+  coming: string
+}
+
 const DISTRICT_OPTIONS = ['区域', '大渡口', '渝中', '江北区', '渝北区', '九龙坡', '沙坪坝', '巴南', '南岸']
 const DISTRICT_ID_BY_NAME: Record<string, number> = {
   大渡口: 18048,
@@ -62,6 +67,10 @@ const DEFAULT_HOUSE_TYPE_ID = 2
 const DEFAULT_PAGE_SIZE = 10
 const WECHAT_LOGIN_STORAGE_KEY = 'wechat_login_result'
 const CURRENT_SHARE_STORAGE_KEY = 'current_wechat_share'
+const DEFAULT_TITLE_LABELS: TitleLabels = {
+  auctioning: '',
+  coming: '',
+}
 
 function pickFirstImage(urls?: string | null): string {
   if (!urls) return ''
@@ -120,11 +129,13 @@ function normalizeRows(rows: HouseRow[]): HouseItem[] {
   })
 }
 
-function titleByType(type: number, cityName: string): string {
+function titleByType(type: number, cityName: string, labels?: Partial<TitleLabels>): string {
+  const auctioningLabel = String(labels?.auctioning || '').trim() || DEFAULT_TITLE_LABELS.auctioning
+  const comingLabel = String(labels?.coming || '').trim() || DEFAULT_TITLE_LABELS.coming
   if (type === 0) return `今日新增(${cityName})`
-  if (type === 1) return `正在拍卖(${cityName})`
-  if (type === 2) return `即将拍卖(${cityName})`
-  return `法拍列表(${cityName})`
+  if (type === 1) return `${auctioningLabel}(${cityName})`
+  if (type === 2) return `${comingLabel}(${cityName})`
+  return `FP列表(${cityName})`
 }
 
 function readWechatShareProfile(): WechatShareProfile | null {
@@ -167,6 +178,7 @@ Page({
   data: {
     cityName: DEFAULT_CITY_NAME,
     type: 1,
+    titleLabels: DEFAULT_TITLE_LABELS,
     keyword: '',
     pageNo: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -191,20 +203,46 @@ Page({
   onLoad(options: Record<string, string>) {
     const cityName = decodeURIComponent(options.cityName || DEFAULT_CITY_NAME)
     const type = Number(options.type || 1)
+    const auctioningLabel = decodeURIComponent(options.auctioningLabel || '').trim()
+    const comingLabel = decodeURIComponent(options.comingLabel || '').trim()
+    const titleLabels: TitleLabels = {
+      auctioning: auctioningLabel || DEFAULT_TITLE_LABELS.auctioning,
+      coming: comingLabel || DEFAULT_TITLE_LABELS.coming,
+    }
     ;(this as any)._districtNameToIdMap = new Map<string, number>(
       Object.entries(DISTRICT_ID_BY_NAME)
     )
     this.setData({
       cityName,
       type,
+      titleLabels,
       'filterOptions.area': DISTRICT_OPTIONS.slice(),
     })
-    wx.setNavigationBarTitle({ title: titleByType(type, cityName) })
+    this.updateNavigationTitle(type, cityName, titleLabels)
+    void this.loadBasicSettings()
     syncWechatShareMenu(readWechatShareProfile())
     ;(this as any).refreshList()
   },
   onShow() {
     syncWechatShareMenu(readWechatShareProfile())
+  },
+  async loadBasicSettings() {
+    try {
+      const settings = await requestBasicSettings()
+      const titleLabels: TitleLabels = {
+        auctioning: String(settings.fapai_auctioning_label || '').trim() || DEFAULT_TITLE_LABELS.auctioning,
+        coming: String(settings.fapai_coming_label || '').trim() || DEFAULT_TITLE_LABELS.coming,
+      }
+      this.setData({ titleLabels })
+      this.updateNavigationTitle(this.data.type, this.data.cityName, titleLabels)
+    } catch (error) {
+      this.updateNavigationTitle(this.data.type, this.data.cityName, this.data.titleLabels)
+    }
+  },
+  updateNavigationTitle(type: number, cityName: string, labels?: Partial<TitleLabels>) {
+    wx.setNavigationBarTitle({
+      title: titleByType(type, cityName, labels || this.data.titleLabels),
+    })
   },
   buildQuery(pageNo: number): HouseListQuery {
     const query: HouseListQuery = {
@@ -220,9 +258,7 @@ Page({
     if (this.data.filterIndex.area > 0) {
       const districtId = ((this as any)._districtNameToIdMap as Map<string, number>).get(areaName)
       query.districtName = areaName
-      if (districtId) {
-        query.districtId = districtId
-      }
+      if (districtId) query.districtId = districtId
     }
 
     if (this.data.filterIndex.layout > 0) {
@@ -274,7 +310,7 @@ Page({
       let total = 0
       if (isTypeList) {
         const typeQuery: Partial<HouseListQuery> = Object.assign({}, query)
-        delete (typeQuery as any).houseTypeId
+        delete (typeQuery as Partial<HouseListQuery> & { houseTypeId?: number }).houseTypeId
         const result = await requestHouseTypeList(typeQuery)
         rows = result.rows as HouseRow[]
         total = result.total
@@ -283,7 +319,7 @@ Page({
         rows = result.rows as HouseRow[]
         total = result.total
       }
-      const pageList = normalizeRows(rows as HouseRow[])
+      const pageList = normalizeRows(rows)
       const merged = reset ? pageList : this.data.list.concat(pageList)
       this.setData({
         list: merged,
@@ -293,7 +329,7 @@ Page({
       })
     } catch (error) {
       this.setData({ isLoadingMore: false })
-      wx.showToast({ title: '鍒楄〃鍔犺浇澶辫触', icon: 'none' })
+      wx.showToast({ title: '列表加载失败', icon: 'none' })
     }
   },
   onLoadMore() {

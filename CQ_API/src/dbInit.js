@@ -15,6 +15,7 @@ const LEGACY_SYSTEM_STAFF_TABLE = 'people';
 const WECHAT_USERS_TABLE = 'wechat_users';
 const WECHAT_SALES_SHARES_TABLE = 'wechat_sales_shares';
 const WECHAT_CUSTOMER_SALES_BINDINGS_TABLE = 'wechat_customer_sales_bindings';
+const STAFF_WECHAT_BIND_REQUESTS_TABLE = 'staff_wechat_bind_requests';
 const LEGACY_WECHAT_USERS_TABLE = 'wechat_phone_auths';
 const LEGACY_WECHAT_BINDINGS_TABLE = 'wechat_openid_bindings';
 const DEFAULT_STAFF_PASSWORD = '123456';
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS basic_settings (
   interest_rate DECIMAL(6, 2) NOT NULL DEFAULT 3.15,
   fapai_intro TEXT NULL,
   low_down_payment_intro TEXT NULL,
+  fapai_home_label VARCHAR(50) NOT NULL DEFAULT '法拍房',
   fapai_auctioning_label VARCHAR(50) NOT NULL DEFAULT '正在拍卖',
   fapai_coming_label VARCHAR(50) NOT NULL DEFAULT '即将拍卖',
   mini_program_access_mode VARCHAR(16) NOT NULL DEFAULT 'strict',
@@ -187,6 +189,29 @@ CREATE TABLE IF NOT EXISTS wechat_customer_sales_bindings (
   INDEX idx_sales_openid (sales_openid),
   INDEX idx_sales_person_id (sales_person_id),
   INDEX idx_share_key (share_key)
+)
+`;
+
+const CREATE_STAFF_WECHAT_BIND_REQUESTS_TABLE_SQL = `
+CREATE TABLE IF NOT EXISTS staff_wechat_bind_requests (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  staff_id BIGINT NOT NULL,
+  bind_token VARCHAR(64) NOT NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'pending',
+  expires_at DATETIME NOT NULL,
+  requested_by_staff_id BIGINT NOT NULL,
+  requested_by_name VARCHAR(50) DEFAULT '',
+  openid VARCHAR(64) DEFAULT '',
+  unionid VARCHAR(64) DEFAULT '',
+  confirmed_at DATETIME NULL,
+  invalidated_at DATETIME NULL,
+  invalidated_reason VARCHAR(64) DEFAULT '',
+  raw_json JSON NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_bind_token (bind_token),
+  INDEX idx_staff_status (staff_id, status),
+  INDEX idx_expires_at (expires_at)
 )
 `;
 
@@ -334,8 +359,12 @@ async function synchronizeBasicSettingsSchema(connection) {
     alters.push('ADD COLUMN `low_down_payment_intro` TEXT NULL AFTER `fapai_intro`');
   }
 
+  if (!columnNames.has('fapai_home_label')) {
+    alters.push("ADD COLUMN `fapai_home_label` VARCHAR(50) NOT NULL DEFAULT '法拍房' AFTER `low_down_payment_intro`");
+  }
+
   if (!columnNames.has('fapai_auctioning_label')) {
-    alters.push("ADD COLUMN `fapai_auctioning_label` VARCHAR(50) NOT NULL DEFAULT '正在拍卖' AFTER `low_down_payment_intro`");
+    alters.push("ADD COLUMN `fapai_auctioning_label` VARCHAR(50) NOT NULL DEFAULT '正在拍卖' AFTER `fapai_home_label`");
   }
 
   if (!columnNames.has('fapai_coming_label')) {
@@ -946,6 +975,65 @@ async function synchronizeWechatCustomerSalesBindingsSchema(connection) {
   }
 }
 
+async function synchronizeStaffWechatBindRequestsSchema(connection) {
+  const [columns] = await connection.query(`SHOW COLUMNS FROM \`${STAFF_WECHAT_BIND_REQUESTS_TABLE}\``);
+  const [indexes] = await connection.query(`SHOW INDEX FROM \`${STAFF_WECHAT_BIND_REQUESTS_TABLE}\``);
+  const columnNames = new Set(columns.map((column) => column.Field));
+  const indexNames = new Set(indexes.map((index) => index.Key_name));
+  const alters = [];
+
+  if (!columnNames.has('staff_id')) {
+    alters.push('ADD COLUMN `staff_id` BIGINT NOT NULL AFTER `id`');
+  }
+  if (!columnNames.has('bind_token')) {
+    alters.push('ADD COLUMN `bind_token` VARCHAR(64) NOT NULL AFTER `staff_id`');
+  }
+  if (!columnNames.has('status')) {
+    alters.push("ADD COLUMN `status` VARCHAR(24) NOT NULL DEFAULT 'pending' AFTER `bind_token`");
+  }
+  if (!columnNames.has('expires_at')) {
+    alters.push('ADD COLUMN `expires_at` DATETIME NOT NULL AFTER `status`');
+  }
+  if (!columnNames.has('requested_by_staff_id')) {
+    alters.push('ADD COLUMN `requested_by_staff_id` BIGINT NOT NULL AFTER `expires_at`');
+  }
+  if (!columnNames.has('requested_by_name')) {
+    alters.push("ADD COLUMN `requested_by_name` VARCHAR(50) DEFAULT '' AFTER `requested_by_staff_id`");
+  }
+  if (!columnNames.has('openid')) {
+    alters.push("ADD COLUMN `openid` VARCHAR(64) DEFAULT '' AFTER `requested_by_name`");
+  }
+  if (!columnNames.has('unionid')) {
+    alters.push("ADD COLUMN `unionid` VARCHAR(64) DEFAULT '' AFTER `openid`");
+  }
+  if (!columnNames.has('confirmed_at')) {
+    alters.push('ADD COLUMN `confirmed_at` DATETIME NULL AFTER `unionid`');
+  }
+  if (!columnNames.has('invalidated_at')) {
+    alters.push('ADD COLUMN `invalidated_at` DATETIME NULL AFTER `confirmed_at`');
+  }
+  if (!columnNames.has('invalidated_reason')) {
+    alters.push("ADD COLUMN `invalidated_reason` VARCHAR(64) DEFAULT '' AFTER `invalidated_at`");
+  }
+  if (!columnNames.has('raw_json')) {
+    alters.push('ADD COLUMN `raw_json` JSON NULL AFTER `invalidated_reason`');
+  }
+
+  if (alters.length > 0) {
+    await connection.query(`ALTER TABLE \`${STAFF_WECHAT_BIND_REQUESTS_TABLE}\` ${alters.join(', ')}`);
+  }
+
+  if (!indexNames.has('uniq_bind_token')) {
+    await connection.query(`ALTER TABLE \`${STAFF_WECHAT_BIND_REQUESTS_TABLE}\` ADD UNIQUE KEY \`uniq_bind_token\` (\`bind_token\`)`);
+  }
+  if (!indexNames.has('idx_staff_status')) {
+    await connection.query(`ALTER TABLE \`${STAFF_WECHAT_BIND_REQUESTS_TABLE}\` ADD INDEX \`idx_staff_status\` (\`staff_id\`, \`status\`)`);
+  }
+  if (!indexNames.has('idx_expires_at')) {
+    await connection.query(`ALTER TABLE \`${STAFF_WECHAT_BIND_REQUESTS_TABLE}\` ADD INDEX \`idx_expires_at\` (\`expires_at\`)`);
+  }
+}
+
 async function mergeLegacySystemStaffTable(connection) {
   const legacyExists = await tableExists(connection, LEGACY_SYSTEM_STAFF_TABLE);
   if (!legacyExists) return;
@@ -1061,6 +1149,7 @@ async function initializeApplicationSchema(connection) {
   await connection.query(CREATE_WECHAT_USERS_TABLE_SQL);
   await connection.query(CREATE_WECHAT_SALES_SHARES_TABLE_SQL);
   await connection.query(CREATE_WECHAT_CUSTOMER_SALES_BINDINGS_TABLE_SQL);
+  await connection.query(CREATE_STAFF_WECHAT_BIND_REQUESTS_TABLE_SQL);
   await connection.query(CREATE_DJL_DELETED_HOUSES_TABLE_SQL);
   await connection.query(CREATE_DJL_SUB_AREA_TABLE_SQL);
   await connection.query(CREATE_DJL_SYNC_TASK_TABLE_SQL);
@@ -1082,6 +1171,7 @@ async function initializeApplicationSchema(connection) {
   await synchronizeWechatUsersSchema(connection);
   await synchronizeWechatSalesSharesSchema(connection);
   await synchronizeWechatCustomerSalesBindingsSchema(connection);
+  await synchronizeStaffWechatBindRequestsSchema(connection);
   await mergeLegacySystemStaffTable(connection);
   await mergeLegacyWechatUsersTable(connection);
   await migrateWechatOpenidBindingsToWechatUsers(connection);

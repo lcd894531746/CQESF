@@ -1,12 +1,15 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, RouterView, useRouter } from 'vue-router'
-import { clearAuthStorage, getAuthUser, getRoleLabel, isReviewerOrAbove } from '../constants/auth'
+import { clearAuthStorage, getAuthUser, getRoleLabel, isReviewerOrAbove, setAuthUser } from '../constants/auth'
 import request from '../utils/request'
 
 const router = useRouter()
 const passwordDialogVisible = ref(false)
-const currentUser = computed(() => getAuthUser())
+const bindDialogVisible = ref(false)
+const bindDialogLoading = ref(false)
+const currentUserState = ref(getAuthUser())
+const currentUser = computed(() => currentUserState.value)
 const currentUserRoleLabel = computed(() => getRoleLabel(currentUser.value?.role || ''))
 const passwordForm = reactive({
   password: '',
@@ -16,6 +19,18 @@ const passwordMessage = reactive({
   type: '',
   text: '',
 })
+const bindDialogState = reactive({
+  qrCodeUrl: '',
+  expiresAt: '',
+})
+
+const bindButtonText = computed(() => {
+  if (currentUser.value?.wechat_openid) return '已绑定微信'
+  if (currentUser.value?.bind_status === 'pending') return '去绑定'
+  return '未发起绑定'
+})
+
+const canOpenBindDialog = computed(() => currentUser.value?.bind_status === 'pending' && !currentUser.value?.wechat_openid)
 
 async function logout() {
   clearAuthStorage()
@@ -45,6 +60,36 @@ function closePasswordDialog() {
   passwordForm.confirmPassword = ''
 }
 
+function closeBindDialog() {
+  bindDialogVisible.value = false
+  bindDialogState.qrCodeUrl = ''
+  bindDialogState.expiresAt = ''
+}
+
+async function refreshCurrentUser() {
+  const response = await request.get('/system-staff/current', { showLoading: false })
+  currentUserState.value = response.data?.data || null
+  setAuthUser(currentUserState.value)
+}
+
+async function openBindDialog() {
+  if (!canOpenBindDialog.value || !currentUser.value?.id) return
+  bindDialogLoading.value = true
+  try {
+    const response = await request.get(`/system-staff/${currentUser.value.id}/wechat-bind-request`, {
+      showLoading: false,
+    })
+    bindDialogState.qrCodeUrl = response.data?.data?.bindRequest?.qrCodeUrl || ''
+    bindDialogState.expiresAt = response.data?.data?.bindRequest?.expiresAt || ''
+    bindDialogVisible.value = true
+    await refreshCurrentUser()
+  } catch (error) {
+    showPasswordMessage('error', error.response?.data?.message || '读取绑定码失败')
+  } finally {
+    bindDialogLoading.value = false
+  }
+}
+
 async function updateCurrentPassword() {
   if (!isReviewerOrAbove()) {
     showPasswordMessage('error', '暂无操作权限')
@@ -71,6 +116,14 @@ async function updateCurrentPassword() {
     showPasswordMessage('error', error.response?.data?.message || '修改密码失败')
   }
 }
+
+onMounted(async () => {
+  try {
+    await refreshCurrentUser()
+  } catch {
+    // ignore initial refresh failure and keep cached user state
+  }
+})
 </script>
 
 <template>
@@ -94,9 +147,19 @@ async function updateCurrentPassword() {
       </nav>
 
       <div class="sidebar-actions">
-        <div class="sidebar-user-card">
-          <strong class="sidebar-user-name">{{ currentUser?.name || currentUser?.phone || '未登录' }}</strong>
-          <span class="sidebar-user-role">{{ currentUserRoleLabel || '-' }}</span>
+        <div class="sidebar-user-card sidebar-user-card-stacked">
+          <div class="sidebar-user-card-main">
+            <strong class="sidebar-user-name">{{ currentUser?.name || currentUser?.phone || '未登录' }}</strong>
+            <span class="sidebar-user-role">{{ currentUserRoleLabel || '-' }}</span>
+          </div>
+          <button
+            class="sidebar-bind-btn"
+            type="button"
+            :disabled="bindDialogLoading || !canOpenBindDialog"
+            @click="openBindDialog"
+          >
+            {{ bindButtonText }}
+          </button>
         </div>
         <button v-permission="'reviewer'" class="logout-btn" type="button" @click="openPasswordDialog">修改密码</button>
         <button class="logout-btn" type="button" @click="logout">退出登录</button>
@@ -127,6 +190,24 @@ async function updateCurrentPassword() {
           <button class="ghost" type="button" @click="closePasswordDialog">取消</button>
         </div>
       </form>
+    </div>
+
+    <div v-if="bindDialogVisible" class="modal-mask">
+      <div class="card modal-card bind-modal-card">
+        <div class="modal-title-row">
+          <h3>去绑定</h3>
+          <button class="modal-close-btn" type="button" aria-label="关闭弹窗" @click="closeBindDialog">×</button>
+        </div>
+        <p class="modal-subtitle">请使用当前员工的微信扫一扫下方二维码，1分钟内完成绑定。</p>
+        <div class="bind-qr-wrap">
+          <img v-if="bindDialogState.qrCodeUrl" :src="bindDialogState.qrCodeUrl" alt="绑定二维码" class="bind-qr-image" />
+          <p v-else class="empty-cell">当前没有可用绑定码，请联系管理员重新生成。</p>
+        </div>
+        <p v-if="bindDialogState.expiresAt" class="bind-expire-text">有效期至：{{ bindDialogState.expiresAt }}</p>
+        <div class="actions">
+          <button class="ghost" type="button" @click="closeBindDialog">关闭</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

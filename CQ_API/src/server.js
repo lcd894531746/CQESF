@@ -7,7 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const pool = require('./db');
-const { port, publicBaseUrl, uploadAbsoluteDir, imageCleanServiceBaseUrl } = require('./config');
+const { port, publicBaseUrl, uploadAbsoluteDir, imageCleanServiceBaseUrl, wechat } = require('./config');
 const { initializeApplicationSchema } = require('./dbInit');
 const { normalizeNumber, formatImageUrl, parseJsonArray, toPublicImageUrl } = require('./utils');
 const {
@@ -30,7 +30,7 @@ const { listDjlSyncTasks, getLatestRunningDjlSyncTask } = require('./djlSyncQuer
 const { enqueueDjlFullSync, startDjlFullSync } = require('./djlSyncService');
 const { rebuildDjlSubAreaCenters, refreshDjlDistrictMetrics } = require('./djlSubAreaService');
 const { queryBeikeCommunityPrice } = require('./beikeCommunityPriceService');
-const { getPhoneNumberByCode } = require('./wechatService');
+const { getPhoneNumberByCode, code2Session, getUnlimitedQRCode } = require('./wechatService');
 
 fs.mkdirSync(uploadAbsoluteDir, { recursive: true });
 
@@ -41,6 +41,7 @@ const DJL_DELETED_HOUSES_TABLE = 'djl_deleted_houses';
 const WECHAT_USERS_TABLE = 'wechat_users';
 const WECHAT_SALES_SHARES_TABLE = 'wechat_sales_shares';
 const WECHAT_CUSTOMER_SALES_BINDINGS_TABLE = 'wechat_customer_sales_bindings';
+const STAFF_WECHAT_BIND_REQUESTS_TABLE = 'staff_wechat_bind_requests';
 const BK_MAP_HOUSES_TABLE = 'bk_map_house_cards';
 const AUTH_VALID_DAYS = 7;
 const ROLE_ADMIN = 'admin';
@@ -58,6 +59,7 @@ const STAFF_ROLES = new Set([ROLE_ADMIN, ROLE_REVIEWER, ROLE_UPLOADER, ROLE_SALE
 const DEFAULT_STAFF_PASSWORD = '123456';
 const PASSWORD_SALT = 'cq-resale-house-system-staff';
 const ADMIN_TOKEN_EXPIRES_IN_MS = 7 * 24 * 60 * 60 * 1000;
+const STAFF_BIND_REQUEST_TTL_MS = 60 * 1000;
 const ADMIN_TOKEN_SECRET = process.env.ADMIN_TOKEN_SECRET || process.env.AUTH_TOKEN_SECRET || `${PASSWORD_SALT}:admin-token`;
 const IMAGE_PROXY_ALLOWED_HOSTS = new Set([
   'ke-image.ljcdn.com',
@@ -83,6 +85,32 @@ let cachedBasicSettingsAt = 0;
 
 function hashPassword(password) {
   return crypto.createHash('sha256').update(`${PASSWORD_SALT}:${password}`).digest('hex');
+}
+
+function createOpaqueToken(byteLength = 24) {
+  return crypto.randomBytes(byteLength).toString('base64url');
+}
+
+function toDateTime(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+function isStaffBindRequestExpired(row) {
+  const expiresAt = toDateTime(row?.expires_at);
+  return !expiresAt || expiresAt.getTime() <= Date.now();
+}
+
+function toMiniProgramScene(payload) {
+  const parts = [];
+  Object.entries(payload || {}).forEach(([key, value]) => {
+    const text = String(value || '').trim();
+    if (!text) return;
+    parts.push(`${key}=${text}`);
+  });
+  return parts.join('&').slice(0, 32);
 }
 
 function base64UrlEncode(value) {
@@ -147,14 +175,12 @@ function readWechatShareKey(req) {
   ).trim();
 }
 
-function readWechatRequestPhone(req) {
+function readWechatRequestOpenid(req) {
   return String(
-    req.headers['x-phone-number']
-    || req.headers['x-wechat-phone']
-    || req.query?.phoneNumber
-    || req.query?.phone
+    req.headers['x-wechat-openid']
+    || req.headers['x-openid']
+    || req.query?.openid
     || req.body?.phoneNumber
-    || req.body?.phone
     || req.body?.openid
     || ''
   ).trim();
@@ -326,6 +352,11 @@ function isSystemStaff(row) {
   return Boolean(row && isEnabledPersonStatus(row.status));
 }
 
+function buildInternalAccessMessage(salesPerson) {
+  if (salesPerson?.name) return `已绑定内部人员：${salesPerson.name}`;
+  return '已绑定内部人员';
+}
+
 function isInternalMiniProgramViewer(req) {
   if (req.adminUser && isEnabledPersonStatus(req.adminUser.status)) return true;
   return Boolean(req.wechatMiniProgramUser?.matchedPerson && isEnabledPersonStatus(req.wechatMiniProgramUser.matchedPerson.status));
@@ -377,35 +408,35 @@ async function allowAdminOrShareAccess(req, res, next) {
     }
   }
 
-  const requestPhone = readWechatRequestPhone(req);
-  if (requestPhone) {
-    const staff = await findSystemStaffByPhone(pool, requestPhone);
+  const requestOpenid = readWechatRequestOpenid(req);
+  if (requestOpenid) {
+    const staff = await findSystemStaffByWechatOpenid(pool, requestOpenid);
     if (staff && isSystemStaff(staff)) {
       req.wechatMiniProgramUser = {
-        phoneNumber: requestPhone,
+        openid: requestOpenid,
         matchedPerson: sanitizePersonRow(staff),
       };
       return next();
     }
 
-    const phoneProfile = await buildWechatPhoneProfileWithShareKey(pool, requestPhone);
-    if (phoneProfile?.accessGranted) {
+    const openidProfile = await buildWechatLoginProfileWithShareKey(pool, requestOpenid, '');
+    if (openidProfile?.accessGranted) {
       req.wechatMiniProgramUser = {
-        phoneNumber: requestPhone,
-        matchedPerson: phoneProfile.matchedPerson || null,
-        salesPerson: phoneProfile.salesPerson || null,
+        openid: requestOpenid,
+        matchedPerson: openidProfile.matchedPerson || null,
+        salesPerson: openidProfile.salesPerson || null,
       };
       return next();
     }
   }
 
   const shareKey = readWechatShareKey(req);
-  if (requestPhone && shareKey) {
-    const shareAccess = await processCustomerShareAccess(pool, requestPhone, shareKey);
+  if (requestOpenid && shareKey) {
+    const shareAccess = await processCustomerShareAccess(pool, requestOpenid, shareKey);
     if (shareAccess?.accessGranted) {
-      const profile = shareAccess.profile || await buildWechatPhoneProfileWithShareKey(pool, requestPhone);
+      const profile = shareAccess.profile || await buildWechatLoginProfileWithShareKey(pool, requestOpenid, '');
       req.wechatMiniProgramUser = {
-        phoneNumber: requestPhone,
+        openid: requestOpenid,
         matchedPerson: profile?.matchedPerson || null,
         salesPerson: profile?.salesPerson || null,
       };
@@ -415,16 +446,15 @@ async function allowAdminOrShareAccess(req, res, next) {
   }
 
   if (!shareKey) {
-    return res.status(403).json({ success: false, ok: false, message: '请通过销售分享进入' });
+    return res.status(403).json({ success: false, ok: false, message: '请通过内部人员分享进入' });
   }
 
   const share = await findSalesShareByKey(pool, shareKey);
   if (isShareInvalid(share)) {
-    return res.status(403).json({ success: false, ok: false, message: '分享无效，请联系销售' });
+    return res.status(403).json({ success: false, ok: false, message: '分享无效，请联系内部人员' });
   }
 
-  req.wechatShare = share;
-  next();
+  return res.status(403).json({ success: false, ok: false, message: '请先完成微信登录后再访问' });
 }
 
 async function getBasicSettingsRow(connection) {
@@ -434,7 +464,7 @@ async function getBasicSettingsRow(connection) {
   }
 
   const [rows] = await connection.query(
-    `SELECT id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, fapai_auctioning_label, fapai_coming_label, mini_program_access_mode, updated_at
+    `SELECT id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, fapai_home_label, fapai_auctioning_label, fapai_coming_label, mini_program_access_mode, updated_at
        FROM basic_settings
       WHERE id = 1
       LIMIT 1`
@@ -494,6 +524,28 @@ function sanitizeSystemStaffForAdmin(row) {
     remark: row.remark,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    bind_status: row.bind_status || '',
+    bind_request: row.bind_request || null,
+  };
+}
+
+function sanitizeStaffBindRequest(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    staffId: row.staff_id,
+    bindToken: String(row.bind_token || ''),
+    status: String(row.status || '').trim(),
+    expiresAt: toIsoStringOrEmpty(row.expires_at),
+    requestedByStaffId: row.requested_by_staff_id,
+    requestedByName: String(row.requested_by_name || ''),
+    confirmedAt: toIsoStringOrEmpty(row.confirmed_at),
+    invalidatedAt: toIsoStringOrEmpty(row.invalidated_at),
+    invalidatedReason: String(row.invalidated_reason || ''),
+    openid: String(row.openid || ''),
+    unionid: String(row.unionid || ''),
+    qrCodeUrl: String(row.qr_code_url || ''),
+    expired: isStaffBindRequestExpired(row),
   };
 }
 
@@ -1789,40 +1841,137 @@ async function findSystemStaffById(connection, id) {
   return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 }
 
+async function findActiveStaffBindRequestByStaffId(connection, staffId) {
+  const [rows] = await connection.query(
+    `SELECT id, staff_id, bind_token, status, expires_at, requested_by_staff_id, requested_by_name, openid, unionid,
+            confirmed_at, invalidated_at, invalidated_reason, raw_json, created_at, updated_at
+       FROM ${STAFF_WECHAT_BIND_REQUESTS_TABLE}
+      WHERE staff_id = ?
+        AND status = 'pending'
+      ORDER BY id DESC
+      LIMIT 1`,
+    [staffId]
+  );
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+}
+
+async function findStaffBindRequestByToken(connection, bindToken) {
+  const [rows] = await connection.query(
+    `SELECT id, staff_id, bind_token, status, expires_at, requested_by_staff_id, requested_by_name, openid, unionid,
+            confirmed_at, invalidated_at, invalidated_reason, raw_json, created_at, updated_at
+       FROM ${STAFF_WECHAT_BIND_REQUESTS_TABLE}
+      WHERE bind_token = ?
+      ORDER BY id DESC
+      LIMIT 1`,
+    [bindToken]
+  );
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+}
+
+async function invalidatePendingStaffBindRequests(connection, staffId, reason = 'regenerated') {
+  await connection.query(
+    `UPDATE ${STAFF_WECHAT_BIND_REQUESTS_TABLE}
+        SET status = 'invalidated',
+            invalidated_at = NOW(),
+            invalidated_reason = ?
+      WHERE staff_id = ?
+        AND status = 'pending'`,
+    [String(reason || 'regenerated').trim(), staffId]
+  );
+}
+
+async function markExpiredStaffBindRequests(connection, staffId = 0) {
+  const params = [];
+  let sql = `
+    UPDATE ${STAFF_WECHAT_BIND_REQUESTS_TABLE}
+       SET status = 'expired',
+           invalidated_at = NOW(),
+           invalidated_reason = CASE
+             WHEN invalidated_reason IS NULL OR invalidated_reason = '' THEN 'expired'
+             ELSE invalidated_reason
+           END
+     WHERE status = 'pending'
+       AND expires_at <= NOW()
+  `;
+  if (Number(staffId) > 0) {
+    sql += ' AND staff_id = ?';
+    params.push(Number(staffId));
+  }
+  await connection.query(sql, params);
+}
+
+async function enrichSystemStaffRowsWithBindStatus(connection, rows) {
+  const staffRows = Array.isArray(rows) ? rows : [];
+  if (staffRows.length === 0) return [];
+  await markExpiredStaffBindRequests(connection);
+
+  const staffIds = staffRows.map((row) => Number(row.id || 0)).filter(Boolean);
+  const placeholders = staffIds.map(() => '?').join(', ');
+  const [requestRows] = await connection.query(
+    `SELECT id, staff_id, bind_token, status, expires_at, requested_by_staff_id, requested_by_name, openid, unionid,
+            confirmed_at, invalidated_at, invalidated_reason, raw_json, created_at, updated_at
+       FROM ${STAFF_WECHAT_BIND_REQUESTS_TABLE}
+      WHERE staff_id IN (${placeholders})
+      ORDER BY id DESC`,
+    staffIds
+  );
+  const requestMap = new Map();
+  for (const row of requestRows || []) {
+    if (!requestMap.has(row.staff_id)) requestMap.set(row.staff_id, row);
+  }
+
+  return staffRows.map((row) => {
+    const bindRequest = requestMap.get(row.id) || null;
+    let bindStatus = 'unbound';
+    if (String(row.wechat_openid || '').trim()) {
+      bindStatus = 'bound';
+    } else if (bindRequest) {
+      if (bindRequest.status === 'pending' && !isStaffBindRequestExpired(bindRequest)) {
+        bindStatus = 'pending';
+      } else if (bindRequest.status === 'expired') {
+        bindStatus = 'expired';
+      } else {
+        bindStatus = 'unbound';
+      }
+    }
+    return Object.assign({}, row, {
+      bind_status: bindStatus,
+      bind_request: bindRequest ? sanitizeStaffBindRequest(bindRequest) : null,
+    });
+  });
+}
+
 async function buildWechatPhoneProfileWithShareKey(connection, phone) {
   const publicAccessEnabled = await isMiniProgramPublicAccessEnabled(connection);
-  const currentPerson = await findSystemStaffByPhone(connection, phone);
+  const currentPerson = await findSystemStaffByWechatOpenid(connection, phone);
   const binding = await findCustomerSalesBinding(connection, phone);
   const bindingShare = binding?.share_key ? await findSalesShareByKey(connection, binding.share_key) : null;
   const boundSalesPerson = binding?.sales_openid
-    ? await findSystemStaffByPhone(connection, binding.sales_openid)
+    ? await findSystemStaffByWechatOpenid(connection, binding.sales_openid)
     : null;
+  const hasValidBoundSalesPerson = Boolean(binding?.sales_openid && isSystemStaff(boundSalesPerson));
   const matchedPerson = currentPerson ? sanitizePersonRow(currentPerson) : null;
   const salesPerson = boundSalesPerson ? sanitizePersonRow(boundSalesPerson) : null;
   const currentPersonIsStaff = isSystemStaff(currentPerson);
   const currentPersonIsSales = isSalesPerson(currentPerson);
   const bindingExpired = binding
-    ? !binding.sales_openid || isShareInvalid(bindingShare)
+    ? !hasValidBoundSalesPerson || isShareInvalid(bindingShare)
     : true;
   const accessGranted = publicAccessEnabled
     ? true
-    : currentPersonIsStaff || Boolean(binding && !bindingExpired && binding.sales_openid);
+    : currentPersonIsStaff || Boolean(binding && !bindingExpired && hasValidBoundSalesPerson);
   let accessMessage = '';
 
-  if (currentPersonIsSales) {
-    accessMessage = '销售身份已识别';
-  } else if (currentPersonIsStaff) {
+  if (currentPersonIsStaff) {
     accessMessage = '内部人员身份已识别';
   } else if (publicAccessEnabled) {
     accessMessage = '公开浏览模式';
-  } else if (!binding || !binding.sales_openid) {
-    accessMessage = '请通过销售分享进入';
+  } else if (!binding || !hasValidBoundSalesPerson) {
+    accessMessage = '请通过内部人员分享进入';
   } else if (bindingExpired) {
-    accessMessage = '分享已过期，请联系销售';
-  } else if (salesPerson?.name) {
-    accessMessage = `已绑定销售：${salesPerson.name}`;
+    accessMessage = '分享已过期，请联系内部人员';
   } else {
-    accessMessage = '已绑定销售';
+    accessMessage = buildInternalAccessMessage(salesPerson);
   }
 
   return {
@@ -1856,7 +2005,7 @@ async function processCustomerShareAccess(connection, phone, shareKey) {
   const baseProfile = await buildWechatPhoneProfileWithShareKey(connection, phone);
   const publicAccessEnabled = await isMiniProgramPublicAccessEnabled(connection);
 
-  const currentStaff = await findSystemStaffByPhone(connection, phone);
+  const currentStaff = await findSystemStaffByWechatOpenid(connection, phone);
   if (baseProfile.canShareMiniProgram || isSystemStaff(currentStaff)) {
     return {
       accessGranted: true,
@@ -1893,7 +2042,7 @@ async function processCustomerShareAccess(connection, phone, shareKey) {
   const sharePhone = String(currentShare.sales_openid || '').trim();
   const salesPerson = currentShare.sales_person_id
     ? await findSystemStaffById(connection, currentShare.sales_person_id)
-    : await findSystemStaffByPhone(connection, sharePhone);
+    : await findSystemStaffByWechatOpenid(connection, sharePhone);
   if (!sharePhone || !isSystemStaff(salesPerson)) {
     return {
       accessGranted: publicAccessEnabled,
@@ -2149,31 +2298,30 @@ async function buildWechatLoginProfile(connection, openid, unionid) {
   const boundSalesPerson = binding?.sales_openid
     ? await findSystemStaffByWechatOpenid(connection, binding.sales_openid)
     : null;
+  const hasValidBoundSalesPerson = Boolean(binding?.sales_openid && isSystemStaff(boundSalesPerson));
   const matchedPerson = currentPerson ? sanitizePersonRow(currentPerson) : null;
   const salesPerson = boundSalesPerson ? sanitizePersonRow(boundSalesPerson) : null;
   const currentPersonIsStaff = isSystemStaff(currentPerson);
   const currentPersonIsSales = isSalesPerson(currentPerson);
   const authorizedUntilDate = binding?.authorized_until || null;
   const bindingExpired = binding
-    ? !binding.sales_openid || isAuthorizedExpired(authorizedUntilDate)
+    ? !hasValidBoundSalesPerson || isAuthorizedExpired(authorizedUntilDate)
     : true;
   const accessGranted = publicAccessEnabled
     ? true
-    : currentPersonIsStaff || Boolean(binding && !bindingExpired && binding.sales_openid);
+    : currentPersonIsStaff || Boolean(binding && !bindingExpired && hasValidBoundSalesPerson);
   let accessMessage = '';
 
   if (currentPersonIsStaff) {
-    accessMessage = currentPersonIsSales ? '销售身份已识别' : '内部人员身份已识别';
+    accessMessage = '内部人员身份已识别';
   } else if (publicAccessEnabled) {
     accessMessage = '公开浏览模式';
-  } else if (!binding || !binding.sales_openid) {
-    accessMessage = '请联系销售';
+  } else if (!binding || !hasValidBoundSalesPerson) {
+    accessMessage = '请联系内部人员';
   } else if (bindingExpired) {
-    accessMessage = '已过7天有效期，请联系销售';
-  } else if (salesPerson?.name) {
-    accessMessage = `已绑定销售：${salesPerson.name}`;
+    accessMessage = '已过7天有效期，请联系内部人员';
   } else {
-    accessMessage = '已绑定销售';
+    accessMessage = buildInternalAccessMessage(salesPerson);
   }
 
   return {
@@ -2211,30 +2359,29 @@ async function buildWechatLoginProfileWithShareKey(connection, openid, unionid) 
   const boundSalesPerson = binding?.sales_openid
     ? await findSystemStaffByWechatOpenid(connection, binding.sales_openid)
     : null;
+  const hasValidBoundSalesPerson = Boolean(binding?.sales_openid && isSystemStaff(boundSalesPerson));
   const matchedPerson = currentPerson ? sanitizePersonRow(currentPerson) : null;
   const salesPerson = boundSalesPerson ? sanitizePersonRow(boundSalesPerson) : null;
   const currentPersonIsStaff = isSystemStaff(currentPerson);
   const currentPersonIsSales = isSalesPerson(currentPerson);
   const bindingExpired = binding
-    ? !binding.sales_openid || isShareInvalid(bindingShare)
+    ? !hasValidBoundSalesPerson || isShareInvalid(bindingShare)
     : true;
   const accessGranted = publicAccessEnabled
     ? true
-    : currentPersonIsStaff || Boolean(binding && !bindingExpired && binding.sales_openid);
+    : currentPersonIsStaff || Boolean(binding && !bindingExpired && hasValidBoundSalesPerson);
   let accessMessage = '';
 
   if (currentPersonIsStaff) {
-    accessMessage = currentPersonIsSales ? '销售身份已识别' : '内部人员身份已识别';
+    accessMessage = '内部人员身份已识别';
   } else if (publicAccessEnabled) {
     accessMessage = '公开浏览模式';
-  } else if (!binding || !binding.sales_openid) {
-    accessMessage = fallbackUser?.sales_openid ? '请通过销售新的分享链接进入' : '请联系销售';
+  } else if (!binding || !hasValidBoundSalesPerson) {
+    accessMessage = fallbackUser?.sales_openid ? '请通过内部人员新的分享链接进入' : '请联系内部人员';
   } else if (bindingExpired) {
-    accessMessage = '分享已过期，请联系销售人员';
-  } else if (salesPerson?.name) {
-    accessMessage = `已绑定销售：${salesPerson.name}`;
+    accessMessage = '分享已过期，请联系内部人员';
   } else {
-    accessMessage = '已绑定销售';
+    accessMessage = buildInternalAccessMessage(salesPerson);
   }
 
   return {
@@ -2314,7 +2461,8 @@ async function listSystemStaff(req, res) {
        FROM ${SYSTEM_STAFF_TABLE}
        ORDER BY id DESC`
   );
-  res.json({ success: true, data: rows.map(sanitizeSystemStaffForAdmin) });
+  const enrichedRows = await enrichSystemStaffRowsWithBindStatus(pool, rows);
+  res.json({ success: true, data: enrichedRows.map(sanitizeSystemStaffForAdmin) });
 }
 
 async function createSystemStaff(req, res) {
@@ -2405,10 +2553,19 @@ async function loginSystemStaff(req, res) {
   }
 
   const token = createAdminToken(person);
+  const [currentRows] = await pool.query(
+    `SELECT id, name, phone, role, wechat_openid, wechat_unionid, wechat_bound_at, status, remark, created_at, updated_at
+       FROM ${SYSTEM_STAFF_TABLE}
+      WHERE id = ?
+      LIMIT 1`,
+    [person.id]
+  );
+  const enrichedCurrentRows = await enrichSystemStaffRowsWithBindStatus(pool, currentRows);
+  const currentPerson = enrichedCurrentRows[0] || person;
   res.json({
     success: true,
     data: {
-      ...sanitizeSystemStaffForAdmin(person),
+      ...sanitizeSystemStaffForAdmin(currentPerson),
       token,
     },
     token,
@@ -2447,6 +2604,288 @@ async function updateSystemStaffPassword(req, res) {
   }
 
   res.json({ success: true, message: '密码已修改' });
+}
+
+async function getCurrentSystemStaff(req, res) {
+  const [rows] = await pool.query(
+    `SELECT id, name, phone, role, wechat_openid, wechat_unionid, wechat_bound_at, status, remark, created_at, updated_at
+       FROM ${SYSTEM_STAFF_TABLE}
+      WHERE id = ?
+      LIMIT 1`,
+    [Number(req.adminUser?.id || 0)]
+  );
+  const enrichedRows = await enrichSystemStaffRowsWithBindStatus(pool, rows);
+  const person = enrichedRows[0] || null;
+  if (!person) {
+    return res.status(404).json({ success: false, message: '当前账号不存在' });
+  }
+  res.json({ success: true, data: sanitizeSystemStaffForAdmin(person) });
+}
+
+async function generateStaffWechatBindRequest(req, res) {
+  const staffId = Number(req.params.id || req.body?.staffId || 0);
+  if (!staffId) {
+    return res.status(400).json({ success: false, message: '人员ID不能为空' });
+  }
+
+  const staff = await findSystemStaffById(pool, staffId);
+  if (!staff) {
+    return res.status(404).json({ success: false, message: '系统人员不存在' });
+  }
+  if (!isEnabledPersonStatus(staff.status)) {
+    return res.status(403).json({ success: false, message: '该员工已停用，不能发起绑定' });
+  }
+
+  await markExpiredStaffBindRequests(pool, staffId);
+  await invalidatePendingStaffBindRequests(pool, staffId, 'regenerated');
+
+  const bindToken = createOpaqueToken(12);
+  const expiresAt = new Date(Date.now() + STAFF_BIND_REQUEST_TTL_MS);
+  const scene = toMiniProgramScene({ t: bindToken });
+  const qrCodeBuffer = await getUnlimitedQRCode({
+    scene,
+    page: 'pages/bind-staff/index',
+    envVersion: wechat.qrCodeEnvVersion,
+  });
+  const qrCodeDataUrl = `data:image/png;base64,${qrCodeBuffer.toString('base64')}`;
+
+  const rawJson = JSON.stringify({
+    scene,
+    page: 'pages/bind-staff/index',
+  });
+
+  const [result] = await pool.query(
+    `INSERT INTO ${STAFF_WECHAT_BIND_REQUESTS_TABLE}
+      (staff_id, bind_token, status, expires_at, requested_by_staff_id, requested_by_name, raw_json)
+     VALUES (?, ?, 'pending', ?, ?, ?, ?)`,
+    [
+      staffId,
+      bindToken,
+      expiresAt,
+      Number(req.adminUser?.id || 0),
+      String(req.adminUser?.name || '').trim(),
+      rawJson,
+    ]
+  );
+
+  const [rows] = await pool.query(
+    `SELECT id, staff_id, bind_token, status, expires_at, requested_by_staff_id, requested_by_name, openid, unionid,
+            confirmed_at, invalidated_at, invalidated_reason, raw_json, created_at, updated_at
+       FROM ${STAFF_WECHAT_BIND_REQUESTS_TABLE}
+      WHERE id = ?
+      LIMIT 1`,
+    [result.insertId]
+  );
+  const bindRequest = rows?.[0] || null;
+  const sanitized = sanitizeStaffBindRequest(Object.assign({}, bindRequest, { qr_code_url: qrCodeDataUrl }));
+
+  res.json({
+    success: true,
+    data: {
+      staffId,
+      bindStatus: 'pending',
+      bindRequest: sanitized,
+    },
+    message: '绑定码已生成',
+  });
+}
+
+async function unbindSystemStaffWechat(req, res) {
+  const staffId = Number(req.params.id || req.body?.staffId || 0);
+  if (!staffId) {
+    return res.status(400).json({ success: false, message: '人员ID不能为空' });
+  }
+
+  const staff = await findSystemStaffById(pool, staffId);
+  if (!staff) {
+    return res.status(404).json({ success: false, message: '系统人员不存在' });
+  }
+
+  await invalidatePendingStaffBindRequests(pool, staffId, 'manual_unbind');
+
+  const currentOpenid = String(staff.wechat_openid || '').trim();
+  await pool.query(
+    `UPDATE ${SYSTEM_STAFF_TABLE}
+        SET wechat_openid = '',
+            wechat_unionid = '',
+            wechat_bound_at = NULL
+      WHERE id = ?`,
+    [staffId]
+  );
+
+  if (currentOpenid) {
+    await pool.query(
+      `UPDATE ${WECHAT_USERS_TABLE}
+          SET sales_openid = '',
+              sales_person_id = NULL,
+              updated_at = NOW()
+        WHERE openid = ?`,
+      [currentOpenid]
+    );
+  }
+
+  res.json({
+    success: true,
+    message: '已解除微信绑定',
+  });
+}
+
+async function getStaffWechatBindRequest(req, res) {
+  const staffId = Number(req.params.id || req.query?.staffId || req.adminUser?.id || 0);
+  if (!staffId) {
+    return res.status(400).json({ success: false, message: '人员ID不能为空' });
+  }
+  if (Number(req.adminUser?.id || 0) !== staffId && !hasRoleAtMostLevel(req.adminUser?.role, 1)) {
+    return res.status(403).json({ success: false, message: '暂无操作权限' });
+  }
+
+  await markExpiredStaffBindRequests(pool, staffId);
+  const staff = await findSystemStaffById(pool, staffId);
+  if (!staff) {
+    return res.status(404).json({ success: false, message: '系统人员不存在' });
+  }
+
+  const bindRequest = await findActiveStaffBindRequestByStaffId(pool, staffId);
+  let sanitized = bindRequest ? sanitizeStaffBindRequest(bindRequest) : null;
+  if (bindRequest && bindRequest.status === 'pending' && !isStaffBindRequestExpired(bindRequest)) {
+    const qrCodeBuffer = await getUnlimitedQRCode({
+      scene: toMiniProgramScene({ t: bindRequest.bind_token }),
+      page: 'pages/bind-staff/index',
+      envVersion: wechat.qrCodeEnvVersion,
+    });
+    sanitized = Object.assign({}, sanitized, {
+      qrCodeUrl: `data:image/png;base64,${qrCodeBuffer.toString('base64')}`,
+    });
+  }
+  res.json({
+    success: true,
+    data: {
+      staffId,
+      bindStatus: String(staff.wechat_openid || '').trim() ? 'bound' : (sanitized ? 'pending' : 'unbound'),
+      bindRequest: sanitized || null,
+      wechatOpenid: String(staff.wechat_openid || ''),
+      wechatBoundAt: toIsoStringOrEmpty(staff.wechat_bound_at),
+    },
+  });
+}
+
+async function getMiniProgramBindRequestByToken(req, res) {
+  const bindToken = String(req.query?.bindToken || req.query?.token || '').trim();
+  if (!bindToken) {
+    return res.status(400).json({ success: false, message: '绑定令牌不能为空' });
+  }
+
+  await markExpiredStaffBindRequests(pool);
+  const bindRequest = await findStaffBindRequestByToken(pool, bindToken);
+  if (!bindRequest) {
+    return res.status(404).json({ success: false, message: '绑定请求不存在' });
+  }
+  if (bindRequest.status !== 'pending' || isStaffBindRequestExpired(bindRequest)) {
+    return res.status(410).json({ success: false, message: '绑定码已失效，请联系管理员重新生成' });
+  }
+
+  const staff = await findSystemStaffById(pool, bindRequest.staff_id);
+  if (!staff || !isEnabledPersonStatus(staff.status)) {
+    return res.status(404).json({ success: false, message: '绑定员工不存在或已停用' });
+  }
+
+  res.json({
+    success: true,
+    data: {
+      bindRequest: sanitizeStaffBindRequest(bindRequest),
+      staff: {
+        id: staff.id,
+        name: staff.name,
+        role: normalizeStaffRole(staff.role),
+      },
+    },
+  });
+}
+
+async function confirmMiniProgramStaffBinding(req, res) {
+  const bindToken = String(req.body?.bindToken || req.body?.token || '').trim();
+  const code = String(req.body?.code || '').trim();
+  if (!bindToken || !code) {
+    return res.status(400).json({ success: false, message: '绑定令牌和登录 code 不能为空' });
+  }
+
+  await markExpiredStaffBindRequests(pool);
+  const bindRequest = await findStaffBindRequestByToken(pool, bindToken);
+  if (!bindRequest) {
+    return res.status(404).json({ success: false, message: '绑定请求不存在' });
+  }
+  if (bindRequest.status !== 'pending' || isStaffBindRequestExpired(bindRequest)) {
+    return res.status(410).json({ success: false, message: '绑定码已失效，请联系管理员重新生成' });
+  }
+
+  const staff = await findSystemStaffById(pool, bindRequest.staff_id);
+  if (!staff || !isEnabledPersonStatus(staff.status)) {
+    return res.status(404).json({ success: false, message: '绑定员工不存在或已停用' });
+  }
+
+  const session = await code2Session(code);
+  const openid = String(session.openid || '').trim();
+  const unionid = String(session.unionid || '').trim();
+  if (!openid) {
+    return res.status(502).json({ success: false, message: '未获取到微信身份，请重试' });
+  }
+
+  const occupiedStaff = await findSystemStaffByWechatOpenid(pool, openid);
+  if (occupiedStaff && Number(occupiedStaff.id) !== Number(staff.id)) {
+    return res.status(409).json({ success: false, message: '该微信已绑定其他员工，请先解绑' });
+  }
+
+  await pool.query(
+    `UPDATE ${SYSTEM_STAFF_TABLE}
+        SET wechat_openid = ?, wechat_unionid = ?, wechat_bound_at = NOW()
+      WHERE id = ?`,
+    [openid, unionid, staff.id]
+  );
+
+  await pool.query(
+    `INSERT INTO ${WECHAT_USERS_TABLE}
+      (openid, unionid, sales_openid, sales_person_id, bound_at, last_login_at, raw_json)
+     VALUES (?, ?, ?, ?, NOW(), NOW(), ?)
+     ON DUPLICATE KEY UPDATE
+      unionid = VALUES(unionid),
+      sales_openid = VALUES(sales_openid),
+      sales_person_id = VALUES(sales_person_id),
+      bound_at = COALESCE(${WECHAT_USERS_TABLE}.bound_at, VALUES(bound_at)),
+      last_login_at = VALUES(last_login_at),
+      raw_json = VALUES(raw_json)`,
+    [
+      openid,
+      unionid,
+      openid,
+      staff.id,
+      JSON.stringify({ bindSource: 'staff_bind_request', staffId: staff.id }),
+    ]
+  );
+
+  await pool.query(
+    `UPDATE ${STAFF_WECHAT_BIND_REQUESTS_TABLE}
+        SET status = 'used',
+            openid = ?,
+            unionid = ?,
+            confirmed_at = NOW(),
+            raw_json = JSON_SET(COALESCE(raw_json, JSON_OBJECT()), '$.confirmedByOpenid', ?, '$.confirmedUnionid', ?)
+      WHERE id = ?`,
+    [openid, unionid, openid, unionid, bindRequest.id]
+  );
+
+  const profile = await buildWechatLoginProfileWithShareKey(pool, openid, unionid);
+  res.json({
+    success: true,
+    data: {
+      profile,
+      staff: sanitizePersonRow(Object.assign({}, staff, {
+        wechat_openid: openid,
+        wechat_unionid: unionid,
+        wechat_bound_at: new Date(),
+      })),
+    },
+    message: '微信绑定成功',
+  });
 }
 
 async function createApp() {
@@ -2555,24 +2994,24 @@ async function createApp() {
         ...profile,
         phoneNumber: phone,
         accessGranted: Boolean(profile.accessGranted),
-        accessMessage: profile.accessMessage || '请通过销售分享进入',
+        accessMessage: profile.accessMessage || '请通过内部人员分享进入',
       },
       message: '手机号绑定成功',
     });
   }));
 
   app.post('/api/wechat/create-share', asyncHandler(async (req, res) => {
-    const phone = String(req.body?.phoneNumber || req.body?.phone || req.body?.openid || req.body?.salesOpenid || '').trim();
-    if (!phone) {
-      return res.status(400).json({ success: false, message: '手机号不能为空' });
+    const openid = String(req.body?.openid || req.body?.salesOpenid || req.body?.phoneNumber || req.body?.phone || '').trim();
+    if (!openid) {
+      return res.status(400).json({ success: false, message: 'openid 不能为空' });
     }
 
-    const salesPerson = await findSystemStaffByPhone(pool, phone);
+    const salesPerson = await findSystemStaffByWechatOpenid(pool, openid);
     if (!isSystemStaff(salesPerson)) {
       return res.status(403).json({ success: false, message: '只有内部人员才能创建分享' });
     }
 
-    const share = await createSalesShareRecord(pool, salesPerson, phone);
+    const share = await createSalesShareRecord(pool, salesPerson, openid);
     res.json({
       success: true,
       data: {
@@ -2583,21 +3022,20 @@ async function createApp() {
   }));
 
   app.post('/api/wechat/bind-sales-openid', asyncHandler(async (req, res) => {
-    const phone = String(req.body?.phoneNumber || req.body?.phone || req.body?.openid || '').trim();
+    const openid = String(req.body?.openid || req.body?.phoneNumber || req.body?.phone || '').trim();
     const shareKey = String(req.body?.shareKey || req.body?.share_key || '').trim();
 
-    if (!phone) {
-      return res.status(400).json({ success: false, message: '手机号不能为空' });
+    if (!openid) {
+      return res.status(400).json({ success: false, message: 'openid 不能为空' });
     }
 
-    const shareResult = await processCustomerShareAccess(pool, phone, shareKey);
-    const profile = shareResult.profile || await buildWechatPhoneProfileWithShareKey(pool, phone);
+    const shareResult = await processCustomerShareAccess(pool, openid, shareKey);
+    const profile = shareResult.profile || await buildWechatLoginProfileWithShareKey(pool, openid, '');
 
     res.json({
       success: true,
       data: {
         ...profile,
-        phoneNumber: phone,
         accessGranted: shareResult.accessGranted,
         accessMessage: shareResult.accessMessage || profile.accessMessage,
         shareAction: shareResult.shareAction,
@@ -2606,22 +3044,21 @@ async function createApp() {
     });
   }));
 
-  app.post('/api/wechat/phone-profile', asyncHandler(async (req, res) => {
-    const phone = String(req.body?.phoneNumber || req.body?.phone || req.body?.openid || '').trim();
+  app.post('/api/wechat/profile', asyncHandler(async (req, res) => {
+    const openid = String(req.body?.openid || req.body?.phoneNumber || req.body?.phone || '').trim();
     const shareKey = String(req.body?.shareKey || req.body?.share_key || '').trim();
 
-    if (!phone) {
-      return res.status(400).json({ success: false, message: '手机号不能为空' });
+    if (!openid) {
+      return res.status(400).json({ success: false, message: 'openid 不能为空' });
     }
 
     if (shareKey) {
-      const shareResult = await processCustomerShareAccess(pool, phone, shareKey);
-      const profile = shareResult.profile || await buildWechatPhoneProfileWithShareKey(pool, phone);
+      const shareResult = await processCustomerShareAccess(pool, openid, shareKey);
+      const profile = shareResult.profile || await buildWechatLoginProfileWithShareKey(pool, openid, '');
       return res.json({
         success: true,
         data: {
           ...profile,
-          phoneNumber: phone,
           accessGranted: shareResult.accessGranted,
           accessMessage: shareResult.accessMessage || profile.accessMessage,
           shareAction: shareResult.shareAction,
@@ -2630,21 +3067,69 @@ async function createApp() {
       });
     }
 
-    const profile = await buildWechatPhoneProfileWithShareKey(pool, phone);
+    const profile = await buildWechatLoginProfileWithShareKey(pool, openid, '');
     res.json({
       success: true,
       data: {
         ...profile,
-        phoneNumber: phone,
         accessGranted: Boolean(profile.accessGranted),
         accessMessage: profile.accessMessage,
       },
     });
   }));
 
+  app.post('/api/wechat/login', asyncHandler(async (req, res) => {
+    const code = String(req.body?.code || '').trim();
+    const shareKey = String(req.body?.shareKey || req.body?.share_key || '').trim();
+    if (!code) {
+      return res.status(400).json({ success: false, message: '登录 code 不能为空' });
+    }
+
+    const session = await code2Session(code);
+    const openid = String(session.openid || '').trim();
+    const unionid = String(session.unionid || '').trim();
+    if (!openid) {
+      return res.status(502).json({ success: false, message: '未获取到微信身份' });
+    }
+
+    await pool.query(
+      `INSERT INTO ${WECHAT_USERS_TABLE}
+        (openid, unionid, last_login_at, raw_json)
+       VALUES (?, ?, NOW(), ?)
+       ON DUPLICATE KEY UPDATE
+        unionid = VALUES(unionid),
+        last_login_at = VALUES(last_login_at),
+        raw_json = VALUES(raw_json)`,
+      [openid, unionid, JSON.stringify({ loginSource: 'mini_program' })]
+    );
+
+    let profile = await buildWechatLoginProfileWithShareKey(pool, openid, unionid);
+    if (shareKey && !profile.canShareMiniProgram) {
+      const shareResult = await processCustomerShareAccess(pool, openid, shareKey);
+      profile = shareResult.profile || await buildWechatLoginProfileWithShareKey(pool, openid, unionid);
+      profile.shareAction = shareResult.shareAction || profile.shareAction;
+      profile.share = shareResult.share || profile.share || null;
+      profile.accessGranted = Boolean(shareResult.accessGranted);
+      profile.accessMessage = shareResult.accessMessage || profile.accessMessage;
+    }
+
+    res.json({
+      success: true,
+      data: profile,
+      message: '登录成功',
+    });
+  }));
+
+  app.get('/api/wechat/staff-bind-request', asyncHandler(getMiniProgramBindRequestByToken));
+  app.post('/api/wechat/staff-bind-request/confirm', asyncHandler(confirmMiniProgramStaffBinding));
+
+  app.get('/api/system-staff/current', requireStaffAuth, asyncHandler(getCurrentSystemStaff));
   app.get('/api/system-staff', requireLevel1Auth, asyncHandler(listSystemStaff));
   app.get('/api/system-staff/list', requireLevel1Auth, asyncHandler(listSystemStaff));
   app.post('/api/system-staff/login', asyncHandler(loginSystemStaff));
+  app.post('/api/system-staff/:id/wechat-bind-request', requireLevel1Auth, asyncHandler(generateStaffWechatBindRequest));
+  app.get('/api/system-staff/:id/wechat-bind-request', requireStaffAuth, asyncHandler(getStaffWechatBindRequest));
+  app.delete('/api/system-staff/:id/wechat-bind', requireLevel1Auth, asyncHandler(unbindSystemStaffWechat));
   app.post('/api/system-staff/create', requireLevel1Auth, asyncHandler(createSystemStaff));
   app.put('/api/system-staff/password/:id', requireStaffAuth, asyncHandler(updateSystemStaffPassword));
   app.put('/api/system-staff/update/:id', requireLevel1Auth, asyncHandler(updateSystemStaff));
@@ -2683,7 +3168,7 @@ async function createApp() {
   ]), asyncHandler(updateSpecialAsset));
   app.delete('/api/special-assets/:id', requireStaffAuth, asyncHandler(deleteSpecialAsset));
 
-  app.get('/api/basic-settings', allowMiniProgramReadAccess, asyncHandler(async (_, res) => {
+  app.get('/api/basic-settings', asyncHandler(async (_, res) => {
     const settings = await getBasicSettingsRow(pool);
 
     res.json({
@@ -2695,6 +3180,7 @@ async function createApp() {
         interest_rate: 3.15,
         fapai_intro: '',
         low_down_payment_intro: '',
+        fapai_home_label: '法拍房',
         fapai_auctioning_label: '正在拍卖',
         fapai_coming_label: '即将拍卖',
         mini_program_access_mode: MINI_PROGRAM_ACCESS_MODE_STRICT,
@@ -2708,6 +3194,7 @@ async function createApp() {
     const interestRate = normalizeNumber(req.body.interest_rate);
     const fapaiIntro = String(req.body?.fapai_intro || '').trim();
     const lowDownPaymentIntro = String(req.body?.low_down_payment_intro || '').trim();
+    const fapaiHomeLabel = String(req.body?.fapai_home_label || '').trim() || '法拍房';
     const fapaiAuctioningLabel = String(req.body?.fapai_auctioning_label || '').trim() || '正在拍卖';
     const fapaiComingLabel = String(req.body?.fapai_coming_label || '').trim() || '即将拍卖';
 
@@ -2724,14 +3211,15 @@ async function createApp() {
     }
 
     await pool.query(
-      `INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, fapai_auctioning_label, fapai_coming_label, mini_program_access_mode)
-       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO basic_settings (id, min_house_price, max_house_price, interest_rate, fapai_intro, low_down_payment_intro, fapai_home_label, fapai_auctioning_label, fapai_coming_label, mini_program_access_mode)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          min_house_price = VALUES(min_house_price),
          max_house_price = VALUES(max_house_price),
          interest_rate = VALUES(interest_rate),
          fapai_intro = VALUES(fapai_intro),
          low_down_payment_intro = VALUES(low_down_payment_intro),
+         fapai_home_label = VALUES(fapai_home_label),
          fapai_auctioning_label = VALUES(fapai_auctioning_label),
          fapai_coming_label = VALUES(fapai_coming_label),
          mini_program_access_mode = VALUES(mini_program_access_mode)`,
@@ -2741,6 +3229,7 @@ async function createApp() {
         interestRate,
         fapaiIntro,
         lowDownPaymentIntro,
+        fapaiHomeLabel,
         fapaiAuctioningLabel,
         fapaiComingLabel,
         String(req.body?.mini_program_access_mode || MINI_PROGRAM_ACCESS_MODE_STRICT).trim().toLowerCase() === MINI_PROGRAM_ACCESS_MODE_PUBLIC
